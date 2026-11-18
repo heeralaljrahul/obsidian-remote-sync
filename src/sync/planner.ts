@@ -148,6 +148,8 @@ export function plan(local: LocalSnapshot, remote: RemoteSnapshot, baseIn: Map<s
   // ---- 3. files ----
   const filePaths = new Set<string>([...L.keys(), ...R.keys()]);
   for (const b of B.values()) if (!b.isFolder) filePaths.add(b.path);
+  // Show blocked paths in the plan (dry run / log) even if they exist only in Drive.
+  for (const p of blocked.keys()) filePaths.add(p);
 
   const keptFiles = new Set<string>();
 

@@ -75,6 +75,20 @@ export async function prepare(deps: EngineDeps): Promise<Prepared> {
   return { plan: result, base, local, remote };
 }
 
+/**
+ * Refuse obviously dangerous situations before anything runs.
+ * If the vault suddenly looks empty after earlier syncs (vault not loaded yet,
+ * wrong vault, storage wiped), every Drive file would look "deleted locally".
+ */
+export function safetyCheck(prep: Prepared): void {
+  const baseFiles = [...prep.base.values()].filter((b) => !b.isFolder).length;
+  if (prep.local.files.size === 0 && baseFiles > 0) {
+    throw new Error(
+      "The local vault looks empty but was synced before. Refusing to sync (this would delete files in Drive). Check the vault, or reset the sync state in settings."
+    );
+  }
+}
+
 export async function runPlan(deps: EngineDeps, p: SyncPlan): Promise<ExecResult> {
   return execute(p, {
     local: deps.local,

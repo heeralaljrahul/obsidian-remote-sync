@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "node esbuild.config.mjs",
     "build": "tsc --noEmit --skipLibCheck && node esbuild.config.mjs production && node scripts/check-bundle.mjs",
-    "test": "mocha"
+    "test": "tsc -p tsconfig.test.json && mocha"
   },
   "keywords": [
     "obsidian",

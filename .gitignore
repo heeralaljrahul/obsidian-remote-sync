@@ -1,20 +1,7 @@
-# Intellij
-*.iml
-.idea
-
-# npm
-node_modules
-package-lock.json
-
-# build
+node_modules/
 main.js
 *.js.map
-
-# obsidian
 data.json
-
-# debug
-logs.txt
-
-# hidden files
-.*
+.DS_Store
+.idea/
+*.iml

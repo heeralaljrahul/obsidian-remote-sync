@@ -2,7 +2,8 @@
 // or touches Node/Electron-only globals: those don't exist on iOS.
 import { readFileSync } from "fs";
 
-const src = readFileSync(new URL("../main.js", import.meta.url), "utf8");
+const file = process.argv[2] ?? new URL("../main.js", import.meta.url);
+const src = readFileSync(file, "utf8");
 const problems = [];
 
 for (const m of src.matchAll(/require\(\s*["'`]([^"'`]+)["'`]\s*\)/g)) {

@@ -9,7 +9,7 @@ import { ObsidianLocalFs } from "./obsidian/localFs";
 import { obsidianHttp } from "./obsidian/obsidianHttp";
 import { GDriveSettingTab } from "./obsidian/settingTab";
 import { DEFAULT_SETTINGS, type GDriveSettings } from "./settings";
-import { prepare, runPlan, type EngineDeps } from "./sync/engine";
+import { prepare, runPlan, safetyCheck, type EngineDeps } from "./sync/engine";
 import { IgnoreFilter } from "./sync/ignore";
 import { isDeletion, summarize } from "./sync/planner";
 import { reviewReason } from "./sync/planView";
@@ -289,10 +289,7 @@ export default class GDriveSyncPlugin extends Plugin {
       const prep = await prepare(deps);
       const counts = summarize(prep.plan);
 
-      const baseFiles = [...prep.base.values()].filter((b) => !b.isFolder).length;
-      if (prep.local.files.size === 0 && baseFiles > 0) {
-        throw new Error("The local vault looks empty but was synced before. Refusing to sync (this would delete files in Drive). Check the vault, or reset the sync state in settings.");
-      }
+      safetyCheck(prep);
 
       const review = reviewReason(prep.plan, trigger === "dry-run", s.deleteConfirmThreshold);
       if (review) {

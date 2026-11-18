@@ -62,6 +62,22 @@ export interface RetryOptions {
 
 export const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
+/** Rejected before the server did anything: always safe to retry. */
+function isRateLimited(res: HttpResponse): boolean {
+  return res.status === 429 || (res.status === 403 && RATE_LIMIT_REASONS.slice(0, 2).some((r) => res.text.includes(r)));
+}
+
+/**
+ * A request that creates something (new file via multipart upload, new folder).
+ * If the connection dies after Drive committed it, blindly re-sending would create
+ * a DUPLICATE. Those are only retried on explicit rate-limit replies; anything
+ * else is left to the next sync, which adopts what was created.
+ */
+export function isNonIdempotent(req: HttpRequest): boolean {
+  const m = (req.method ?? "GET").toUpperCase();
+  return m === "POST" && !req.url.includes("uploadType=resumable") && !req.url.startsWith("https://oauth2.googleapis.com/");
+}
+
 /** Wrap a transport with exponential backoff + jitter for 403-rate-limit/429/5xx and network errors. */
 export function withRetry(http: HttpFn, opts: RetryOptions = {}): HttpFn {
   const maxRetries = opts.maxRetries ?? 6;
@@ -78,7 +94,9 @@ export function withRetry(http: HttpFn, opts: RetryOptions = {}): HttpFn {
       } catch (e) {
         netErr = e;
       }
-      const retry = netErr !== undefined || (res !== undefined && isRetryable(res));
+      const retry = isNonIdempotent(req)
+        ? res !== undefined && isRateLimited(res)
+        : netErr !== undefined || (res !== undefined && isRetryable(res));
       if (!retry || attempt >= maxRetries) {
         if (netErr !== undefined) throw netErr;
         return res!;
