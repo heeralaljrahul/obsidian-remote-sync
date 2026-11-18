@@ -26,7 +26,7 @@ Google will not send a sign-in result straight back to an `obsidian://` link for
 Nothing secret is in the repo (your client ID and secret live only in plugin settings).
 1. GitHub → this repo → **Settings → General → Danger Zone → Change visibility → Public**.
 2. **Settings → Pages → Build and deployment → Source: GitHub Actions**.
-3. Make sure `main` is the branch that holds this code (the Pages workflow deploys from `main`), then go to **Actions → "Deploy OAuth callback page" → Run workflow**.
+3. Go to **Actions → "Deploy OAuth callback page" → Run workflow**, choosing your **default branch** (GitHub only lets the default branch deploy to Pages). After that it redeploys automatically whenever `callback/` changes on `main`.
 4. When it finishes, open `https://heeralaljrahul.github.io/obsidian-remote-sync/callback/`. You should see "Nothing to do here". That URL (**with the trailing `/`**) is your **redirect URI**, and it's already the plugin's default.
 
 ### Option B: keep this repository private
