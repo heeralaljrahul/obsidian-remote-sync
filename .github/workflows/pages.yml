@@ -3,6 +3,7 @@ name: Deploy OAuth callback page
 # Publishes callback/index.html to GitHub Pages at
 #   https://<user>.github.io/<repo>/callback/
 # One-time setup: repo Settings -> Pages -> Source: "GitHub Actions" (see SETUP.md).
+# Until that is done, this workflow skips the deploy with a warning instead of failing.
 on:
   push:
     branches: [main]
@@ -19,13 +20,35 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  check:
+    runs-on: ubuntu-latest
+    outputs:
+      enabled: ${{ steps.pages.outputs.enabled }}
+    steps:
+      - id: pages
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if build_type=$(gh api "repos/${GITHUB_REPOSITORY}/pages" --jq .build_type 2>/dev/null); then
+            if [ "$build_type" = "workflow" ]; then
+              echo "enabled=true" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            echo "::warning title=GitHub Pages source::Pages is set to build from a branch. Change Settings -> Pages -> Source to 'GitHub Actions', then re-run this workflow."
+          else
+            echo "::warning title=GitHub Pages is not enabled::Turn it on in Settings -> Pages -> Source: 'GitHub Actions', then re-run this workflow (Actions -> Deploy OAuth callback page -> Run workflow). Skipping deploy."
+          fi
+          echo "enabled=false" >> "$GITHUB_OUTPUT"
+
   deploy:
+    needs: check
+    if: needs.check.outputs.enabled == 'true'
     runs-on: ubuntu-latest
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}callback/
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Assemble site
         run: |
           mkdir -p _site/callback
