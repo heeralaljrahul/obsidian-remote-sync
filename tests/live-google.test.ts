@@ -44,7 +44,15 @@ describe("live Google endpoints (no credentials)", function () {
   });
 
   it("TokenManager surfaces Google's real rejection without retrying forever", async () => {
-    const tm = new TokenManager(withRetry(fetchHttp, { maxRetries: 2 }), () => ({ clientId: "000-fake.apps.googleusercontent.com", clientSecret: "x", tokens: { accessToken: "", expiresAt: 0, refreshToken: "1//bogus", scope: "" } }), async () => {});
+    const tm = new TokenManager(
+      withRetry(fetchHttp, { maxRetries: 2 }),
+      () => ({
+        clientId: "000-fake.apps.googleusercontent.com",
+        clientSecret: "x",
+        tokens: { accessToken: "", expiresAt: 0, refreshToken: "1//bogus", scope: "" },
+      }),
+      async () => {}
+    );
     let err: unknown;
     const t = Date.now();
     try {
@@ -78,7 +86,10 @@ describe("live Google endpoints (no credentials)", function () {
 
   it("our files.list query syntax is accepted by Drive's parser (fails on auth, not on the query)", async () => {
     const q = "('abc' in parents or 'd\\'ef' in parents) and trashed = false";
-    const r = await fetchHttp({ url: `https://www.googleapis.com/drive/v3/files?${new URLSearchParams({ q, fields: "nextPageToken,files(id)" })}`, headers: { Authorization: "Bearer ya29.invalid" } });
+    const r = await fetchHttp({
+      url: `https://www.googleapis.com/drive/v3/files?${new URLSearchParams({ q, fields: "nextPageToken,files(id)" })}`,
+      headers: { Authorization: "Bearer ya29.invalid" },
+    });
     expect(r.status).to.equal(401);
     expect(r.text).to.not.match(/Invalid Value|invalid query/i);
   });

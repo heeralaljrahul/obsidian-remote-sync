@@ -1,16 +1,90 @@
-# Google Drive Vault Sync (personal Obsidian plugin)
+# Google Drive Vault Sync
 
-Two-way sync between an Obsidian vault and a folder in **your own** Google Drive, using **your own** free Google Cloud "app". Works on Windows/Mac and on Obsidian for iPhone and iPad. It is not in Obsidian's plugin store; you install it with the **BRAT** plugin.
+[![CI](https://github.com/heeralaljrahul/obsidian-remote-sync/actions/workflows/ci.yml/badge.svg)](https://github.com/heeralaljrahul/obsidian-remote-sync/actions/workflows/ci.yml)
+[![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 
-> ⚠️ **Back up first.** Copy your notes somewhere safe before the first sync (Part 1).
+**An Obsidian plugin that keeps your vault in two-way sync with a folder in your own Google Drive, on Windows/Mac, iPhone and iPad.** It works with a vault folder you already have in Google Drive, uses your own free Google Cloud login (no third-party server, nothing to pay), and never deletes anything permanently.
+
+**Made by [heeralaljrahul](https://github.com/heeralaljrahul)**, developed with the help of Claude Code (Anthropic). It is a fork of [remotely-sync](https://github.com/sboesen/remotely-sync) by sboesen, itself a fork of [remotely-save](https://github.com/remotely-save/remotely-save) by fyears, both Apache-2.0. Everyone whose work or ideas this builds on is credited in [Credits and attribution](#credits-and-attribution) at the end.
+
+It's a personal plugin: it isn't in Obsidian's community plugin store, and you install it with the **BRAT** plugin ([guide below](#complete-setup-guide-step-by-step)).
+
+## What it is
+
+- **For:** keeping one Obsidian vault the same on your PC, iPhone and iPad through Google Drive.
+- **Not:** Obsidian's official [Obsidian Sync](https://obsidian.md/sync) service, nor affiliated with Google or Obsidian.
+- **Where your data goes:** only between your devices and **your** Google Drive. Notes, tokens and keys are never sent to any other server (not even the author's).
+- **Platforms:** Obsidian desktop (Windows, macOS, Linux) and Obsidian mobile on iOS/iPadOS. It uses no desktop-only (Node/Electron) code; Android should work but isn't tested.
+
+> ⚠️ **Back up first.** Copy your notes somewhere safe before the first sync (Part 1 of the guide).
 >
 > ⚠️ **Only one sync system per vault.** Don't let iCloud, Google Drive for Desktop, OneDrive, Dropbox or Obsidian Sync also sync the same vault folder. Two sync systems fight over the same files and can lose data. On iPhone/iPad the vault must be stored **On My iPhone/iPad**, not in iCloud.
 >
-> ⚠️ **No background sync on iPhone/iPad.** Apple doesn't allow it. Syncing happens while Obsidian is open: when you open it, when you return to it, when you leave it, and when you tap the sync button.
+> ⚠️ **No background sync on iPhone/iPad.** Apple doesn't allow it. Syncing happens while Obsidian is open: when you open it, return to it, leave it, after you stop typing, and when you tap the sync button.
 
----
+## What it does
 
-# Complete setup guide (step by step)
+- **Two-way sync** of your existing Drive folder (pick it by name, link or ID), between any number of devices.
+- **Sync now** ribbon icon and command; sync when Obsidian opens, when you return to it, when you leave it with unsynced edits, optionally shortly after you stop editing, and every N minutes (optional). Automatic syncs skip quietly when offline.
+- **Sign-ins that don't expire** once your Google Cloud app is published to "In production"; the plugin warns you if Google ever attaches an expiry (e.g. an app still in "Testing").
+- **Knows which side changed**: every file is compared with what both sides looked like at the last sync (MD5, size, modified time), instead of "newest timestamp wins".
+- **Conflict view**: a note edited on two devices is never silently overwritten. You get a list of conflicts and, per file, a diff (unified on phones, side-by-side optional on desktop) with **Keep this device / Keep Drive / Keep both**. The losing version is never thrown away: it goes to `.trash`, to Drive's version history, or is kept as `Name (conflict date).md`.
+- **Renames** are detected both ways; a local rename moves the Drive file (keeping its ID and revision history).
+- **Safe deletions**: always to Obsidian's `.trash` folder or Google Drive's trash, never permanent. The first sync never deletes anything.
+- **Dry run**: see planned uploads, downloads, deletions and conflicts without changing anything. It runs automatically before the first sync, which only starts after you approve.
+- **Large-deletion guard**: asks before trashing more than 20 items (adjustable).
+- **Resumable**: progress is saved after every file, so a sync interrupted by iOS continues safely next time; big uploads (> 5 MB) resume mid-file.
+- **Efficient**: incremental updates via Drive's Changes API; paginated listings; exponential backoff on rate limits (403/429).
+- **Drive quirks handled**: duplicate names in one folder (identical copies are deduplicated, different ones are skipped and logged, never touched), names that differ only by upper/lower case, Google Docs/Sheets (skipped).
+- **Filters**: `.obsidian` ignored by default (optional sync), editable ignore list, file-size limit. The plugin's own folder (with your OAuth tokens) is never synced.
+- **Sync log** viewable on the phone, with copy for troubleshooting.
+- **Privacy mode** (`drive.file` scope) as an option; see [SETUP.md](SETUP.md#full-drive-access-vs-privacy-mode) for the tradeoff.
+- **iOS-safe**: no Node or Electron APIs; every request uses Obsidian's `requestUrl`, hashing uses Web Crypto / a JS MD5. The build fails if `main.js` would need anything but `obsidian`.
+
+## How it works
+
+**The short version:** each device remembers what every file looked like (checksum, size, date) at the last successful sync. On the next sync it compares three things for every file (*this device now*, *Google Drive now*, *the last sync*), so it knows exactly **which side changed** instead of guessing from timestamps. Then it uploads, downloads, renames, moves to trash, or, if both sides changed, asks you.
+
+### Safety guarantees
+
+- **Nothing is deleted permanently:** deletions go to the vault's `.trash` folder or Google Drive's trash; overwritten Drive files keep their version history.
+- **The first sync never deletes anything**, and always shows a dry run you must approve.
+- **Conflicts are never overwritten silently:** you choose (keep this device / keep Drive / keep both).
+- **Interruptions are safe:** progress is saved after every file; an interrupted sync (iOS suspending the app, lost signal) resumes without duplicates.
+- **Every risky step re-checks first** that the file hasn't changed since the plan was made.
+- **Guards:** asks before trashing more than 20 files; refuses to sync if the vault suddenly looks empty; skips Drive file names that could escape the vault.
+
+### The pieces
+
+| Part | Where | What it does |
+|---|---|---|
+| Sync engine | `src/sync/` | planner (three-way decisions, rename detection), executor (applies the plan, saves progress), conflict resolution, diff, ignore rules. Pure TypeScript, no Obsidian imports, fully unit-tested. |
+| Google Drive | `src/gdrive/` | Drive v3 REST client, OAuth 2.0 + PKCE, cached folder index with the Changes API, resumable uploads, retry/backoff. |
+| Obsidian glue | `src/obsidian/`, `src/main.ts` | vault file access, IndexedDB storage, network via Obsidian's `requestUrl`, settings screen, review/conflict/log windows, sync triggers. |
+| Sign-in page | `callback/` | tiny static page on GitHub Pages that hands Google's sign-in code back to Obsidian. |
+
+### One sync, step by step
+
+1. **Drive side:** bring the cached Drive index up to date (Changes API, or a full paginated scan the first time).
+2. **Local side:** list the vault and hash only the files whose size or modified time changed.
+3. **Plan:** compare each path three ways: local now, Drive now, and the last-synced state:
+
+   | local | Drive | last sync | result |
+   |---|---|---|---|
+   | changed | unchanged | ✓ | upload |
+   | unchanged | changed | ✓ | download |
+   | changed | changed | ✓ | conflict → you choose (unless identical) |
+   | present | present | – | identical: adopt; different: conflict |
+   | deleted | unchanged | ✓ | move Drive copy to trash |
+   | unchanged | deleted | ✓ | move local copy to `.trash` |
+   | deleted | changed | ✓ | restore from Drive (the edit wins) |
+
+4. **Review** if needed (first sync, dry run, many deletions).
+   Conflicts are left untouched by the sync itself; you resolve them afterwards in the conflict view.
+5. **Execute** one action at a time. Each step re-checks that nothing changed since planning, and the last-synced state is saved after every file.
+
+
+## Complete setup guide (step by step)
 
 Read every step in order. Each step says **where** you do it: 💻 = your Windows PC, 📱 = iPhone, 📲 = iPad, 🌐 = a web browser.
 
@@ -25,7 +99,7 @@ Most steps are the same for both. Where they differ, the step says **Path A** or
 
 ---
 
-## Part 1: Make backups (💻, 5 minutes)
+### Part 1: Make backups (💻, 5 minutes)
 
 Nothing in this plugin deletes files permanently, but always keep a backup before trying something new.
 
@@ -37,36 +111,36 @@ Nothing in this plugin deletes files permanently, but always keep a backup befor
 
 ---
 
-## Part 2: Create your own free Google "app" (🌐 on the PC, one time, ~15 minutes)
+### Part 2: Create your own free Google "app" (🌐 on the PC, one time, ~15 minutes)
 
 The plugin needs permission to use your Google Drive. Instead of using someone else's server, you create your own little "app" in Google Cloud. It's free (no credit card).
 
-### 2.1 Create a project
+#### 2.1 Create a project
 1. Go to <https://console.cloud.google.com/> and sign in with **the same Google account that has your notes folder**.
 2. If asked, pick your country, tick the terms box, click **Agree and continue**.
 3. At the top left, next to "Google Cloud", click the **project picker** (it may say "Select a project"). Click **New project**.
 4. Project name: `Obsidian Drive Sync`. Click **Create**.
 5. When the notification says it's ready, click **Select project** (or choose it in the project picker). The top bar must now show `Obsidian Drive Sync`.
 
-### 2.2 Turn on the Google Drive API
+#### 2.2 Turn on the Google Drive API
 1. Click the **☰ menu** (top left) → **APIs & Services** → **Library**.
 2. Search for **Google Drive API**, click it, click **Enable**.
 
-### 2.3 Set up the consent screen
+#### 2.3 Set up the consent screen
 1. **☰ menu** → **APIs & Services** → **OAuth consent screen**. (Newer screens call this **Google Auth Platform**; if you see **Get started**, click it.)
 2. **App information:** App name `Obsidian Drive Sync`; User support email: your email. Click **Next**.
 3. **Audience:** choose **External**. Click **Next**.
 4. **Contact information:** your email. Click **Next**.
 5. Tick the box to agree to the policy → **Continue** → **Create**.
 
-### 2.4 Publish the app (so you never have to log in again every 7 days)
+#### 2.4 Publish the app (so you never have to log in again every 7 days)
 1. In the left menu click **Audience**.
 2. You'll see **Publishing status: Testing**. Click **Publish app** → **Confirm**.
 3. It must now say **In production**.
 
 *Why:* while an app is in "Testing", Google ends every sign-in after **7 days**. "In production" sign-ins don't expire (as long as each device syncs at least once every 6 months). You do **not** need Google to "verify" your app; you'll just click past a warning once per device (Part 6).
 
-### 2.5 Create the login keys ("OAuth client")
+#### 2.5 Create the login keys ("OAuth client")
 1. In the left menu click **Clients** (older screens: **APIs & Services → Credentials → + Create credentials → OAuth client ID**).
 2. Click **+ Create client**.
 3. **Application type: Web application.** Name: `Obsidian`.
@@ -81,7 +155,7 @@ The plugin needs permission to use your Google Drive. Instead of using someone e
 
 ---
 
-## Part 3: Publish the plugin on GitHub (🌐, one time per version, ~5 minutes)
+### Part 3: Publish the plugin on GitHub (🌐, one time per version, ~5 minutes)
 
 BRAT installs the plugin from a GitHub "release". You only do this once (and again only if there's a new version).
 
@@ -96,9 +170,9 @@ BRAT installs the plugin from a GitHub "release". You only do this once (and aga
 
 ---
 
-## Part 4: Get your vault ready on the PC (💻)
+### Part 4: Get your vault ready on the PC (💻)
 
-### Path A: your notes are already in a Google Drive folder
+#### Path A: your notes are already in a Google Drive folder
 
 First find out **where the vault you open in Obsidian on your PC lives**: in Obsidian, right-click any note → **Show in system explorer**. File Explorer opens inside the vault folder; look at the path in its address bar. Then:
 
@@ -115,7 +189,7 @@ First find out **where the vault you open in Obsidian on your PC lives**: in Obs
 
 > Either way, the PC vault and the Drive folder will be compared file by file in the first sync. Identical files are simply marked "in sync": nothing is copied twice.
 
-### Path B: starting fresh
+#### Path B: starting fresh
 
 1. 💻 Obsidian → bottom-left vault name → **Manage vaults** → **Create new vault**. Name it (e.g. `Notes`) and save it in `C:\Users\<you>\Documents\Obsidian\`. Or use an existing local vault you want to start syncing.
 2. 🌐 In <https://drive.google.com>: **+ New → New folder**, name it (e.g. `Obsidian Vault`). Leave it empty.
@@ -123,7 +197,7 @@ First find out **where the vault you open in Obsidian on your PC lives**: in Obs
 
 ---
 
-## Part 5: Install the plugin on the PC (💻, ~5 minutes)
+### Part 5: Install the plugin on the PC (💻, ~5 minutes)
 
 1. Obsidian → **Settings** (⚙ gear, bottom-left) → **Community plugins**.
 2. If you see **Turn on community plugins** (or "Restricted mode is on"), click it to allow plugins.
@@ -135,7 +209,7 @@ First find out **where the vault you open in Obsidian on your PC lives**: in Obs
 
 ---
 
-## Part 6: Connect the plugin on the PC (💻, ~5 minutes)
+### Part 6: Connect the plugin on the PC (💻, ~5 minutes)
 
 Open **Settings** → scroll the left list down to **Google Drive Vault Sync**.
 
@@ -170,7 +244,7 @@ Open **Settings** → scroll the left list down to **Google Drive Vault Sync**.
 
 ---
 
-## Part 7: First sync on the PC (💻, the important one)
+### Part 7: First sync on the PC (💻, the important one)
 
 1. Click the **circular-arrows icon** in the left ribbon (or **Ctrl + P** → **Google Drive Vault Sync: Sync now**).
 2. A window **"Review your first sync"** opens. **Nothing has been changed yet**: this is a dry run. Read the numbers:
@@ -197,7 +271,7 @@ Open **Settings** → scroll the left list down to **Google Drive Vault Sync**.
 
 ---
 
-## Part 8: iPhone (📱, ~10 minutes + download time)
+### Part 8: iPhone (📱, ~10 minutes + download time)
 
 1. **Install Obsidian** from the App Store and open it.
 2. **Create a vault that is NOT in iCloud:**
@@ -225,13 +299,13 @@ Open **Settings** → scroll the left list down to **Google Drive Vault Sync**.
    4. **Keep Obsidian open** until **Sync finished**. If the phone locks or you switch apps, nothing breaks: open Obsidian again and it continues where it stopped.
 10. Open a few notes to check they're all there.
 
-## Part 9: iPad (📲)
+### Part 9: iPad (📲)
 
 Do **exactly the same as Part 8** on the iPad: new vault **not in iCloud**, BRAT, the plugin, the same client ID/secret, sign in, **the same Drive folder**, first sync (downloads), and keep Obsidian open until it finishes.
 
 ---
 
-## Part 10: Test that everything works (~15 minutes)
+### Part 10: Test that everything works (~15 minutes)
 
 Do these once, in order. Each one takes a minute. ✅ = what you should see.
 
@@ -256,7 +330,7 @@ When all ✅: you're done. Delete the test notes (they'll be removed everywhere 
 
 ---
 
-## Everyday use
+### Everyday use
 
 - Just use Obsidian. It syncs when you open it, return to it, leave it, after you stop typing (if you set 60 s), and when you tap the sync icon.
 - **Before switching devices**, give the first device a moment (or tap sync) so its last edits are pushed.
@@ -265,12 +339,12 @@ When all ✅: you're done. Delete the test notes (they'll be removed everywhere 
 - **More than 20 files about to be deleted?** The plugin stops and asks first.
 - **Settings/plugins/themes:** set them up on each device. (Advanced: turn on **Sync the .obsidian folder** on all devices; the plugin will ask you to restart Obsidian when settings arrive from another device.)
 
-## Updating the plugin later
+### Updating the plugin later
 
 - 🌐 When there's a new version, create a release for it exactly like Part 3, but with the new number (e.g. `0.1.1`, which must match `manifest.json`).
 - 💻📱📲 BRAT checks for updates automatically when Obsidian starts. Or use the command palette → **BRAT: Check for updates to all beta plugins**.
 
-## If something goes wrong
+### If something goes wrong
 
 | Problem | What to do |
 |---|---|
@@ -285,50 +359,7 @@ When all ✅: you're done. Delete the test notes (they'll be removed everywhere 
 
 More detail: [SETUP.md](SETUP.md) (Google Cloud, scopes, expiry) and [INSTALL-IOS.md](INSTALL-IOS.md).
 
----
-
-## Features
-
-- **Two-way sync** of your existing Drive folder (pick it by name, link or ID), between any number of devices.
-- **Sync now** ribbon icon and command; sync when Obsidian opens, when you return to it, when you leave it with unsynced edits, optionally shortly after you stop editing, and every N minutes (optional). Automatic syncs skip quietly when offline.
-- **Sign-ins that don't expire** once your Google Cloud app is published to "In production"; the plugin warns you if Google ever attaches an expiry (e.g. an app still in "Testing").
-- **Knows which side changed**: every file is compared with what both sides looked like at the last sync (MD5, size, modified time), instead of "newest timestamp wins".
-- **Conflict view**: a note edited on two devices is never silently overwritten. You get a list of conflicts and, per file, a diff (unified on phones, side-by-side optional on desktop) with **Keep this device / Keep Drive / Keep both**. The losing version is never thrown away: it goes to `.trash`, to Drive's version history, or is kept as `Name (conflict date).md`.
-- **Renames** are detected both ways; a local rename moves the Drive file (keeping its ID and revision history).
-- **Safe deletions**: always to Obsidian's `.trash` folder or Google Drive's trash, never permanent. The first sync never deletes anything.
-- **Dry run**: see planned uploads, downloads, deletions and conflicts without changing anything. It runs automatically before the first sync, which only starts after you approve.
-- **Large-deletion guard**: asks before trashing more than 20 items (adjustable).
-- **Resumable**: progress is saved after every file, so a sync interrupted by iOS continues safely next time; big uploads (> 5 MB) resume mid-file.
-- **Efficient**: incremental updates via Drive's Changes API; paginated listings; exponential backoff on rate limits (403/429).
-- **Drive quirks handled**: duplicate names in one folder (identical copies are deduplicated, different ones are skipped and logged, never touched), names that differ only by upper/lower case, Google Docs/Sheets (skipped).
-- **Filters**: `.obsidian` ignored by default (optional sync), editable ignore list, file-size limit. The plugin's own folder (with your OAuth tokens) is never synced.
-- **Sync log** viewable on the phone, with copy for troubleshooting.
-- **Privacy mode** (`drive.file` scope) as an option; see SETUP.md for the tradeoff.
-- **iOS-safe**: no Node or Electron APIs; every request uses Obsidian's `requestUrl`, hashing uses Web Crypto / a JS MD5. The build fails if `main.js` would need anything but `obsidian`.
-
-## How a sync works
-
-1. **Drive side:** bring the cached Drive index up to date (Changes API, or a full paginated scan the first time).
-2. **Local side:** list the vault and hash only the files whose size or modified time changed.
-3. **Plan:** compare each path three ways: local now, Drive now, and the last-synced state:
-
-   | local | Drive | last sync | result |
-   |---|---|---|---|
-   | changed | unchanged | ✓ | upload |
-   | unchanged | changed | ✓ | download |
-   | changed | changed | ✓ | conflict → you choose (unless identical) |
-   | present | present | – | identical: adopt; different: conflict |
-   | deleted | unchanged | ✓ | move Drive copy to trash |
-   | unchanged | deleted | ✓ | move local copy to `.trash` |
-   | deleted | changed | ✓ | restore from Drive (the edit wins) |
-
-4. **Review** if needed (first sync, dry run, many deletions).
-   Conflicts are left untouched by the sync itself; you resolve them afterwards in the conflict view.
-5. **Execute** one action at a time. Each step re-checks that nothing changed since planning, and the last-synced state is saved after every file.
-
-Code map: `src/sync/` holds the planner, executor and engine (no Obsidian imports, unit-tested). `src/gdrive/` holds the Drive v3 client, OAuth/PKCE, index and provider. `src/obsidian/` holds the vault access, IndexedDB store, `requestUrl` transport, settings and modals. `callback/` is the GitHub Pages sign-in page.
-
-## Development
+## Development and quality checks
 
 ```bash
 npm ci
@@ -342,6 +373,7 @@ npm test
 npm run build
 ```
 
+- `npm run lint` runs ESLint (type-aware rules: no floating promises, no unsafe `any`, no Node imports in the plugin) and checks Prettier formatting.
 - `npm test` type-checks and runs the whole suite (≈190 tests):
   - **unit / integration**: planner, executor, Drive client, OAuth, diff, ignore rules, against an in-memory fake of the Drive v3 REST API
   - **security**: path traversal from Drive names, token/secret handling, OAuth state & PKCE, query injection, callback-page XSS + CSP, bundle must not contain `eval`/`innerHTML`/Node APIs
@@ -367,12 +399,41 @@ git push --follow-tags
 
 `npm version` updates `manifest.json` and `versions.json` and creates the tag `0.1.1` (no `v` prefix, as Obsidian and BRAT expect). Pushing the tag runs `.github/workflows/release.yml`, which checks that the tag matches `manifest.json`, runs all tests, builds the plugin and attaches `main.js`, `manifest.json` and `styles.css` to the release. You can also create the release on github.com (Part 3 of the guide); the workflow then attaches the files to it. Tags with a suffix (e.g. `0.2.0-beta.1`) become pre-releases.
 
-## Credits and license
+## Project documents
 
-This project is a fork of [**remotely-sync**](https://github.com/sboesen/remotely-sync) by sboesen, itself a fork of [remotely-save](https://github.com/remotely-save/remotely-save) by fyears. Both are licensed under the Apache License 2.0; thank you to both projects. The fork started from remotely-sync v0.4.49 (commit `21a9e01`).
+- [SETUP.md](SETUP.md): Google Cloud details, full Drive vs privacy mode, sign-in expiry.
+- [INSTALL-IOS.md](INSTALL-IOS.md): extra background for iPhone/iPad.
+- [SECURITY.md](SECURITY.md): how secrets and data are protected; how to report a problem.
+- [CHANGELOG.md](CHANGELOG.md): what changed in each version.
+- [NOTICE](NOTICE) and [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md): license notices.
 
-The Google Drive provider, OAuth flow and three-way sync planner in this repository were written from scratch against Google's public Drive v3 REST API documentation. No code from remotely-save's `pro/` folder or any other paid or differently-licensed code is included. Conflict-handling ideas are inspired by the [GitHub Gitless Sync](https://community.obsidian.md/plugins/github-gitless-sync) plugin, and the "sync after editing", "sync when leaving", offline-skip and restart-notice ideas by [Obsidian-Google-Drive](https://github.com/richardx366/Obsidian-Google-Drive) by Richard Xiong (ideas only, no code from either).
+## Credits and attribution
 
-Licensed under the Apache License 2.0. See [LICENSE](LICENSE).
+**Author:** [heeralaljrahul](https://github.com/heeralaljrahul): idea, requirements, testing, maintenance. Developed with the help of **Claude Code** by [Anthropic](https://www.anthropic.com) (AI pair-programming; commits are marked "Co-Authored-By: Claude").
 
-This is not affiliated with Google or Obsidian. Google Drive is a trademark of Google LLC.
+**Code this project is based on (Apache-2.0):**
+- [**remotely-sync**](https://github.com/sboesen/remotely-sync) by **sboesen** and contributors. This repository started as a fork of remotely-sync v0.4.49 (commit `21a9e01`).
+- [**remotely-save**](https://github.com/remotely-save/remotely-save) by **fyears** and contributors, the project remotely-sync was forked from.
+- The Google Drive provider, OAuth flow, three-way sync engine, conflict view and tests were written for this project from Google's public Drive v3 documentation. No code from remotely-save's paid `pro/` folder or any other differently-licensed code is included.
+
+**Ideas (no code copied):**
+- [**GitHub Gitless Sync**](https://github.com/silvanocerza/github-gitless-sync) by **Silvano Cerza** (AGPL-3.0): the conflict-resolution experience (diff view with a choice per file).
+- [**Obsidian Google Drive Sync**](https://github.com/richardx366/Obsidian-Google-Drive) by **Richard Xiong**: sync after editing, sync when leaving the app, skipping automatic syncs while offline, the restart notice for synced settings.
+- **Eugene W. Myers**, *"An O(ND) Difference Algorithm and Its Variations"* (1986): the line-diff algorithm used in the conflict view.
+
+**Bundled libraries** (see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)):
+- [localForage](https://github.com/localForage/localForage) by **Mozilla** (Apache-2.0), with [lie](https://github.com/calvinmetcalf/lie) and [immediate](https://github.com/calvinmetcalf/immediate) by **Calvin Metcalf** (MIT).
+- [spark-md5](https://github.com/satazor/js-spark-md5) by **André Cruz** (MIT/WTFPL).
+
+**Platforms and tools:**
+- [Obsidian](https://obsidian.md) and its plugin API.
+- [BRAT](https://github.com/TfTHacker/obsidian42-brat) by **TfTHacker**, used to install this plugin.
+- [Google Drive API](https://developers.google.com/drive/api) and Google OAuth 2.0.
+- [GitHub](https://github.com) Actions and Pages.
+- Development tools: TypeScript and Playwright (Microsoft), esbuild (Evan Wallace), Mocha, Chai, tsx, ESLint, typescript-eslint, Prettier.
+
+## License
+
+Licensed under the [Apache License 2.0](LICENSE). See also [NOTICE](NOTICE) and [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+
+Not affiliated with Google, Obsidian, or Anthropic. Google Drive is a trademark of Google LLC; Obsidian is a trademark of Dynalist Inc.

@@ -16,6 +16,7 @@
  *   - otherwise the path is BLOCKED: never downloaded, uploaded or deleted
  *     until you clean up the duplicates in Drive.
  */
+import { errMsg } from "../log";
 import { foldKey, joinPath, normKey, unsafeNameReason } from "../sync/paths";
 import type { KVStore, RemoteFile, RemoteSnapshot } from "../sync/types";
 import { FOLDER_MIME, isGoogleNative, type DriveApi, type DriveFile } from "./driveApi";
@@ -62,7 +63,11 @@ export class RemoteIndex {
   /** Messages for the sync log (unsyncable items etc.) produced by the last snapshot. */
   notes: string[] = [];
 
-  constructor(private readonly api: DriveApi, private readonly kv: KVStore, readonly rootId: string) {
+  constructor(
+    private readonly api: DriveApi,
+    private readonly kv: KVStore,
+    readonly rootId: string
+  ) {
     this.key = `index\u0000${rootId}`;
   }
 
@@ -77,7 +82,7 @@ export class RemoteIndex {
       await this.applyChanges(log);
     } catch (e) {
       // An expired/invalid cursor (or anything odd) -> rebuild from scratch.
-      log?.(`incremental update failed (${e instanceof Error ? e.message : e}); rescanning the whole folder`);
+      log?.(`incremental update failed (${errMsg(e)}); rescanning the whole folder`);
       await this.fullScan(log);
     }
   }

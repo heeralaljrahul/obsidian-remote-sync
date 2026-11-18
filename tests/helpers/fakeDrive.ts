@@ -69,7 +69,15 @@ export class FakeDrive {
   afterCommit: ((req: HttpRequest) => void) | null = null;
 
   constructor() {
-    this.files.set(ROOT_ID, { id: ROOT_ID, name: "Vault", mimeType: FOLDER_MIME, parents: ["MY_DRIVE"], modifiedTime: this.tick(), createdTime: this.clock, trashed: false });
+    this.files.set(ROOT_ID, {
+      id: ROOT_ID,
+      name: "Vault",
+      mimeType: FOLDER_MIME,
+      parents: ["MY_DRIVE"],
+      modifiedTime: this.tick(),
+      createdTime: this.clock,
+      trashed: false,
+    });
   }
 
   private tick(): number {
@@ -155,7 +163,11 @@ export class FakeDrive {
   }
 
   folderPaths(): string[] {
-    return [...this.files.values()].filter((f) => f.mimeType === FOLDER_MIME && f.id !== ROOT_ID && !f.trashed).map((f) => this.pathOf(f.id)!).filter((p) => p !== null).sort();
+    return [...this.files.values()]
+      .filter((f) => f.mimeType === FOLDER_MIME && f.id !== ROOT_ID && !f.trashed)
+      .map((f) => this.pathOf(f.id)!)
+      .filter((p) => p !== null)
+      .sort();
   }
 
   countAt(path: string): number {
@@ -205,7 +217,10 @@ export class FakeDrive {
   }
 
   trashedNames(): string[] {
-    return [...this.files.values()].filter((f) => f.trashed).map((f) => f.name).sort();
+    return [...this.files.values()]
+      .filter((f) => f.trashed)
+      .map((f) => f.name)
+      .sort();
   }
 
   // ---------- HTTP ----------
@@ -247,7 +262,16 @@ export class FakeDrive {
     }
     const id = this.newId();
     const t = this.tick();
-    const f: FakeFile = { id, name: meta.name!, mimeType: meta.mimeType ?? "application/octet-stream", parents: meta.parents ?? [ROOT_ID], content, modifiedTime: t, createdTime: t, trashed: false };
+    const f: FakeFile = {
+      id,
+      name: meta.name!,
+      mimeType: meta.mimeType ?? "application/octet-stream",
+      parents: meta.parents ?? [ROOT_ID],
+      content,
+      modifiedTime: t,
+      createdTime: t,
+      trashed: false,
+    };
     this.files.set(id, f);
     this.keepRevision(id, content);
     this.touch(id);
@@ -368,7 +392,13 @@ export class FakeDrive {
   private startSession(meta: Session["meta"], existingId: string | undefined, req: HttpRequest): HttpResponse {
     const total = Number(req.headers?.["X-Upload-Content-Length"]);
     const key = `/s${++this.seq}`;
-    this.sessions.set(key, { meta: { ...meta, mimeType: req.headers?.["X-Upload-Content-Type"] }, existingId, total, received: new Uint8Array(total), size: 0 });
+    this.sessions.set(key, {
+      meta: { ...meta, mimeType: req.headers?.["X-Upload-Content-Type"] },
+      existingId,
+      total,
+      received: new Uint8Array(total),
+      size: 0,
+    });
     return json(200, {}, { location: `https://upload.fake${key}` });
   }
 }

@@ -40,7 +40,12 @@ class FakeGoogle {
     if (q.get("response_type") !== "code" || q.get("code_challenge_method") !== "S256" || !q.get("code_challenge")) throw new Error("not a PKCE code request");
     if (q.get("access_type") !== "offline") throw new Error("no offline access requested");
     const code = `4/e2e-code-${++this.n}`;
-    this.codes.set(code, { challenge: q.get("code_challenge")!, redirect: q.get("redirect_uri")!, scope: this.grantDrive ? q.get("scope")! : "openid", used: false });
+    this.codes.set(code, {
+      challenge: q.get("code_challenge")!,
+      redirect: q.get("redirect_uri")!,
+      scope: this.grantDrive ? q.get("scope")! : "openid",
+      used: false,
+    });
     return `${q.get("redirect_uri")}?code=${encodeURIComponent(code)}&state=${encodeURIComponent(q.get("state")!)}&scope=${encodeURIComponent(q.get("scope")!)}`;
   }
 
@@ -61,7 +66,8 @@ class FakeGoogle {
       return json(200, { access_token: at, expires_in: 3599, refresh_token: rt, scope: c.scope, token_type: "Bearer" });
     }
     if (f.get("grant_type") === "refresh_token") {
-      if (!this.refreshTokens.has(f.get("refresh_token") ?? "")) return json(400, { error: "invalid_grant", error_description: "Token has been expired or revoked." });
+      if (!this.refreshTokens.has(f.get("refresh_token") ?? ""))
+        return json(400, { error: "invalid_grant", error_description: "Token has been expired or revoked." });
       const at = `ya29.e2e-${++this.n}`;
       this.accessTokens.add(at);
       return json(200, { access_token: at, expires_in: 3599, scope: "https://www.googleapis.com/auth/drive", token_type: "Bearer" });
@@ -141,7 +147,10 @@ const E2E = {
     const authUrl = opened[opened.length - 1];
     const cb = new URL(google.authorize(authUrl));
     const handler = d.plugin.__handlers.get("gdrive-sync-auth")!;
-    await handler({ action: "gdrive-sync-auth", code: cb.searchParams.get("code")!, state: cb.searchParams.get("state")! });
+    const noticesBefore = obsidian.notices.length;
+    // Like Obsidian, the handler doesn't return a promise: wait until sign-in has finished (a notice is shown).
+    handler({ action: "gdrive-sync-auth", code: cb.searchParams.get("code")!, state: cb.searchParams.get("state")! });
+    for (let i = 0; i < 400 && obsidian.notices.length === noticesBefore; i++) await new Promise((r) => setTimeout(r, 5));
   },
   settings(d: Device) {
     return d.plugin.settings as Record<string, unknown>;

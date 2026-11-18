@@ -18,7 +18,10 @@ export class SyncLog {
   private entries: LogEntry[] = [];
   private dirty = 0;
 
-  constructor(private readonly kv: KVStore | null, private readonly max = 1500) {}
+  constructor(
+    private readonly kv: KVStore | null,
+    private readonly max = 1500
+  ) {}
 
   async load(): Promise<void> {
     if (!this.kv) return;
@@ -61,5 +64,11 @@ export class SyncLog {
 }
 
 export function errMsg(e: unknown): string {
-  return e instanceof Error ? e.message : String(e);
+  if (e instanceof Error) return e.message;
+  if (typeof e === "string") return e;
+  try {
+    return JSON.stringify(e);
+  } catch {
+    return "unknown error";
+  }
 }

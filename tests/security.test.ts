@@ -2,7 +2,16 @@
 import { expect } from "chai";
 import { DriveApi } from "../src/gdrive/driveApi";
 import { HttpError } from "../src/gdrive/http";
-import { checkAuthCallback, exchangeCode, PENDING_AUTH_MAX_AGE_MS, randomString, redirectUriProblem, startAuth, TokenManager, type Tokens } from "../src/gdrive/oauth";
+import {
+  checkAuthCallback,
+  exchangeCode,
+  PENDING_AUTH_MAX_AGE_MS,
+  randomString,
+  redirectUriProblem,
+  startAuth,
+  TokenManager,
+  type Tokens,
+} from "../src/gdrive/oauth";
 import { SyncLog } from "../src/log";
 import { md5Hex } from "../src/sync/engine";
 import { execute } from "../src/sync/executor";
@@ -55,7 +64,11 @@ describe("security", () => {
 
     it("path normalisation can't sneak the plugin's own folder past the ignore rules", () => {
       const f = new IgnoreFilter({ configDir: ".obsidian", syncConfigDir: true, patterns: "" });
-      for (const p of [".obsidian/plugins/gdrive-vault-sync/data.json", "/.obsidian//plugins/gdrive-vault-sync/data.json/", ".obsidian\\plugins\\gdrive-vault-sync\\data.json"]) {
+      for (const p of [
+        ".obsidian/plugins/gdrive-vault-sync/data.json",
+        "/.obsidian//plugins/gdrive-vault-sync/data.json/",
+        ".obsidian\\plugins\\gdrive-vault-sync\\data.json",
+      ]) {
         expect(f.isIgnored(normKey(p), false), p).to.equal(true);
       }
     });
@@ -87,7 +100,10 @@ describe("security", () => {
       pc.provider = new GoogleDriveProvider(new DriveApi(drive.http, async () => TOKEN), pc.kv, ROOT_ID, () => {});
       pc.vault.put("a.md", "a");
       let n = 0;
-      drive.intercept = (req) => (req.method === "POST" && n++ < 1 ? { status: 403, headers: {}, text: JSON.stringify({ error: { message: "forbidden" } }), arrayBuffer: new ArrayBuffer(0) } : undefined);
+      drive.intercept = (req) =>
+        req.method === "POST" && n++ < 1
+          ? { status: 403, headers: {}, text: JSON.stringify({ error: { message: "forbidden" } }), arrayBuffer: new ArrayBuffer(0) }
+          : undefined;
       await pc.sync();
       const all = JSON.stringify(pc.log.all());
       expect(all).to.contain("FAILED");
@@ -96,7 +112,10 @@ describe("security", () => {
     });
 
     it("HTTP errors never include the Authorization header", async () => {
-      const api = new DriveApi(async () => ({ status: 500, headers: {}, text: '{"error":{"message":"boom"}}', arrayBuffer: new ArrayBuffer(0) }), async () => TOKEN);
+      const api = new DriveApi(
+        async () => ({ status: 500, headers: {}, text: '{"error":{"message":"boom"}}', arrayBuffer: new ArrayBuffer(0) }),
+        async () => TOKEN
+      );
       let err: unknown;
       try {
         await api.about();

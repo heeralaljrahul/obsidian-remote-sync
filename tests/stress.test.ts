@@ -107,7 +107,13 @@ describe("stress", function () {
     expect(conflicts).to.have.length(300);
     for (const a of conflicts) {
       if (a.kind !== "conflict") continue;
-      await resolveConflict({ path: a.path, type: a.type, local: a.local, remote: a.remote }, "keep-both", { local: pc.vault, remote: pc.provider, base: new BaseStore(pc.kv, ROOT_ID), log: pc.log, md5: md5Hex });
+      await resolveConflict({ path: a.path, type: a.type, local: a.local, remote: a.remote }, "keep-both", {
+        local: pc.vault,
+        remote: pc.provider,
+        base: new BaseStore(pc.kv, ROOT_ID),
+        log: pc.log,
+        md5: md5Hex,
+      });
     }
     const after = await pc.sync();
     expect(after.prep.plan.actions).to.deep.equal([]);

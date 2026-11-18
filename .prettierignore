@@ -1,3 +1,7 @@
-node_modules/
+node_modules
 main.js
+_site
+package-lock.json
+*.md
+callback/index.html
 data.json

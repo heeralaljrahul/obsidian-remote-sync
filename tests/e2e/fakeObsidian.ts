@@ -44,7 +44,10 @@ export function setIcon(el: HTMLElement, icon: string) {
   el.setAttribute("data-icon", icon);
 }
 export function normalizePath(p: string) {
-  return p.replace(/\\/g, "/").replace(/\/+/g, "/").replace(/^\/|\/$/g, "");
+  return p
+    .replace(/\\/g, "/")
+    .replace(/\/+/g, "/")
+    .replace(/^\/|\/$/g, "");
 }
 export const notices: string[] = [];
 export class Notice {
@@ -64,17 +67,35 @@ export let network: (req: HttpRequest) => Promise<HttpResponse> = async () => {
 export function setNetwork(fn: typeof network) {
   network = fn;
 }
-export function requestUrl(p: { url: string; method?: string; headers?: Record<string, string>; body?: string | ArrayBuffer; contentType?: string; throw?: boolean }) {
+export function requestUrl(p: {
+  url: string;
+  method?: string;
+  headers?: Record<string, string>;
+  body?: string | ArrayBuffer;
+  contentType?: string;
+  throw?: boolean;
+}) {
   return (async () => {
     const r = await network({ url: p.url, method: p.method, headers: p.headers, body: p.body, contentType: p.contentType });
     if (p.throw !== false && r.status >= 400) throw new Error(`Request failed, status ${r.status}`);
-    return { status: r.status, headers: r.headers, arrayBuffer: r.arrayBuffer, text: r.text, get json() { return JSON.parse(r.text); } };
+    return {
+      status: r.status,
+      headers: r.headers,
+      arrayBuffer: r.arrayBuffer,
+      text: r.text,
+      get json() {
+        return JSON.parse(r.text);
+      },
+    };
   })();
 }
 
 // ---------- vault ----------
 export class TAbstractFile {
-  constructor(public vault: FakeVault, public path: string) {}
+  constructor(
+    public vault: FakeVault,
+    public path: string
+  ) {}
   get name() {
     return this.path.split("/").pop()!;
   }
@@ -288,7 +309,10 @@ export class Plugin {
 
 export class PluginSettingTab {
   containerEl = document.createElement("div");
-  constructor(public app: App, public plugin: Plugin) {
+  constructor(
+    public app: App,
+    public plugin: Plugin
+  ) {
     this.containerEl.className = "settings";
   }
 }

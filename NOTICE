@@ -1,0 +1,15 @@
+Google Drive Vault Sync
+Copyright 2026 heeralaljrahul
+
+This product is licensed under the Apache License, Version 2.0 (see LICENSE).
+
+This product is a fork of:
+  - remotely-sync, Copyright sboesen and contributors
+    https://github.com/sboesen/remotely-sync (Apache License 2.0)
+  - which is itself a fork of remotely-save, Copyright fyears and contributors
+    https://github.com/remotely-save/remotely-save (Apache License 2.0)
+The fork started from remotely-sync v0.4.49 (commit 21a9e01). The Google Drive
+provider, OAuth flow, three-way sync engine, conflict view and tests were
+written for this project.
+
+The distributed main.js bundles third-party software; see THIRD_PARTY_NOTICES.md.

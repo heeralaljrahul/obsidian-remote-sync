@@ -6,7 +6,11 @@ import { DEFAULT_REDIRECT_URI, parseFolderId } from "../settings";
 import { DEFAULT_IGNORE_PATTERNS } from "../sync/ignore";
 
 class FolderPickModal extends Modal {
-  constructor(app: App, private readonly folders: DriveFile[], private readonly onPick: (f: DriveFile) => void) {
+  constructor(
+    app: App,
+    private readonly folders: DriveFile[],
+    private readonly onPick: (f: DriveFile) => void
+  ) {
     super(app);
   }
   onOpen() {
@@ -41,7 +45,10 @@ export class GDriveSettingTab extends PluginSettingTab {
   private pastedRefresh = "";
   private newFolderName = "Obsidian Vault";
 
-  constructor(app: App, private readonly plugin: GDriveSyncPlugin) {
+  constructor(
+    app: App,
+    private readonly plugin: GDriveSyncPlugin
+  ) {
     super(app, plugin);
   }
 
@@ -63,10 +70,13 @@ export class GDriveSettingTab extends PluginSettingTab {
       .setName("OAuth client ID")
       .setDesc("From your own Google Cloud project (see SETUP.md). Stored only on this device.")
       .addText((t) =>
-        t.setPlaceholder("xxxx.apps.googleusercontent.com").setValue(s.clientId).onChange(async (v) => {
-          s.clientId = v.trim();
-          await save();
-        })
+        t
+          .setPlaceholder("xxxx.apps.googleusercontent.com")
+          .setValue(s.clientId)
+          .onChange(async (v) => {
+            s.clientId = v.trim();
+            await save();
+          })
       );
     new Setting(containerEl)
       .setName("OAuth client secret")
@@ -82,10 +92,13 @@ export class GDriveSettingTab extends PluginSettingTab {
       .setName("Redirect URI")
       .setDesc("The GitHub Pages callback page. Must exactly match an Authorized redirect URI of your OAuth client.")
       .addText((t) =>
-        t.setPlaceholder(DEFAULT_REDIRECT_URI).setValue(s.redirectUri).onChange(async (v) => {
-          s.redirectUri = v.trim() || DEFAULT_REDIRECT_URI;
-          await save();
-        })
+        t
+          .setPlaceholder(DEFAULT_REDIRECT_URI)
+          .setValue(s.redirectUri)
+          .onChange(async (v) => {
+            s.redirectUri = v.trim() || DEFAULT_REDIRECT_URI;
+            await save();
+          })
       );
     new Setting(containerEl)
       .setName("Permission scope")
@@ -130,7 +143,9 @@ export class GDriveSettingTab extends PluginSettingTab {
     if (!signedIn) {
       new Setting(containerEl)
         .setName("Paste authorization code")
-        .setDesc("If the browser didn't jump back to Obsidian, copy the code shown on the callback page and paste it here (same device, right after signing in).")
+        .setDesc(
+          "If the browser didn't jump back to Obsidian, copy the code shown on the callback page and paste it here (same device, right after signing in)."
+        )
         .addText((t) => t.setPlaceholder("4/0A…").onChange((v) => (this.pastedCode = v)))
         .addButton((b) =>
           b.setButtonText("Use code").onClick(async () => {
@@ -156,7 +171,9 @@ export class GDriveSettingTab extends PluginSettingTab {
     } else {
       new Setting(containerEl)
         .setName("Copy refresh token")
-        .setDesc("To sign in on your phone without the browser flow. Treat it like a password: anyone with it (and your client secret) can access your Drive. Paste it only into this plugin.")
+        .setDesc(
+          "To sign in on your phone without the browser flow. Treat it like a password: anyone with it (and your client secret) can access your Drive. Paste it only into this plugin."
+        )
         .addButton((b) =>
           b.setButtonText("Copy").onClick(async () => {
             await navigator.clipboard.writeText(s.tokens?.refreshToken ?? "");
@@ -167,9 +184,7 @@ export class GDriveSettingTab extends PluginSettingTab {
 
     // ---------- Vault folder ----------
     new Setting(containerEl).setName("Drive vault folder").setHeading();
-    new Setting(containerEl)
-      .setName("Current folder")
-      .setDesc(s.folderId ? `${s.folderName || "(name unknown)"} — ID ${s.folderId}` : "None selected yet.");
+    new Setting(containerEl).setName("Current folder").setDesc(s.folderId ? `${s.folderName || "(name unknown)"} — ID ${s.folderId}` : "None selected yet.");
     new Setting(containerEl)
       .setName("Folder ID or link")
       .setDesc("Paste the folder's ID or its Drive URL (drive.google.com/drive/folders/<ID>).")
@@ -232,7 +247,11 @@ export class GDriveSettingTab extends PluginSettingTab {
     );
     new Setting(containerEl)
       .setName("Sync when returning to Obsidian")
-      .setDesc(Platform.isMobile ? "Runs when you switch back to Obsidian on your phone/iPad (at most once a minute)." : "Runs when the Obsidian window becomes visible again (at most once a minute).")
+      .setDesc(
+        Platform.isMobile
+          ? "Runs when you switch back to Obsidian on your phone/iPad (at most once a minute)."
+          : "Runs when the Obsidian window becomes visible again (at most once a minute)."
+      )
       .addToggle((t) =>
         t.setValue(s.syncOnResume).onChange(async (v) => {
           s.syncOnResume = v;
@@ -241,7 +260,9 @@ export class GDriveSettingTab extends PluginSettingTab {
       );
     new Setting(containerEl)
       .setName("Sync when leaving Obsidian")
-      .setDesc("If you edited something since the last sync, start a sync when you switch away from Obsidian. On iPhone/iPad there are only a few seconds before iOS pauses the app; anything not finished continues next time.")
+      .setDesc(
+        "If you edited something since the last sync, start a sync when you switch away from Obsidian. On iPhone/iPad there are only a few seconds before iOS pauses the app; anything not finished continues next time."
+      )
       .addToggle((t) =>
         t.setValue(s.syncOnLeave).onChange(async (v) => {
           s.syncOnLeave = v;
@@ -320,7 +341,9 @@ export class GDriveSettingTab extends PluginSettingTab {
     });
     new Setting(containerEl)
       .setName("Ask before trashing more than")
-      .setDesc("If one sync would move more than this many files/folders to the trash, it waits for your confirmation (automatic syncs pause until you tap the sync icon).")
+      .setDesc(
+        "If one sync would move more than this many files/folders to the trash, it waits for your confirmation (automatic syncs pause until you tap the sync icon)."
+      )
       .addText((t) =>
         t.setValue(String(s.deleteConfirmThreshold)).onChange(async (v) => {
           const n = Math.floor(Number(v));

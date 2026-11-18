@@ -22,7 +22,7 @@ describe("line diff", () => {
 
   it("is correct on random inputs (property test)", () => {
     let seed = 42;
-    const rnd = () => ((seed = (seed * 1103515245 + 12345) % 2 ** 31) / 2 ** 31);
+    const rnd = () => (seed = (seed * 1103515245 + 12345) % 2 ** 31) / 2 ** 31;
     for (let i = 0; i < 300; i++) {
       const a = Array.from({ length: Math.floor(rnd() * 30) }, () => "xyzw"[Math.floor(rnd() * 4)]);
       const b = Array.from({ length: Math.floor(rnd() * 30) }, () => "xyzw"[Math.floor(rnd() * 4)]);
@@ -55,7 +55,26 @@ describe("line diff", () => {
     const a = splitLines("1\n2\n3\n4\n5\n6\n7\n8\n9\n10\n11\n12\n13\n14\n15\n");
     const b = splitLines("1\n2\n3\n4\n5\n6\nSEVEN\n8\n9\n10\n11\n12\n13\n14\n15\n16\n");
     const text = unifiedText(toHunks(diffLines(a, b)), "Drive", "This device");
-    expect(text).to.equal(["--- Drive", "+++ This device", "@@ -4,7 +4,7 @@", " 4", " 5", " 6", "-7", "+SEVEN", " 8", " 9", " 10", "@@ -13,3 +13,4 @@", " 13", " 14", " 15", "+16"].join("\n"));
+    expect(text).to.equal(
+      [
+        "--- Drive",
+        "+++ This device",
+        "@@ -4,7 +4,7 @@",
+        " 4",
+        " 5",
+        " 6",
+        "-7",
+        "+SEVEN",
+        " 8",
+        " 9",
+        " 10",
+        "@@ -13,3 +13,4 @@",
+        " 13",
+        " 14",
+        " 15",
+        "+16",
+      ].join("\n")
+    );
   });
 
   it("hunk positions for pure insertions/deletions at the start", () => {
@@ -104,7 +123,14 @@ describe("resolving conflicts (mock Google Drive)", () => {
   let conflict: ConflictItem;
 
   const resolve = (choice: Resolution, c = conflict) =>
-    resolveConflict(c, choice, { local: pc.vault, remote: pc.provider, base: new BaseStore(pc.kv, ROOT_ID), log: pc.log, md5: md5Hex, now: () => new Date(2026, 10, 18, 14, 30).getTime() });
+    resolveConflict(c, choice, {
+      local: pc.vault,
+      remote: pc.provider,
+      base: new BaseStore(pc.kv, ROOT_ID),
+      log: pc.log,
+      md5: md5Hex,
+      now: () => new Date(2026, 10, 18, 14, 30).getTime(),
+    });
 
   beforeEach(async () => {
     drive = new FakeDrive();

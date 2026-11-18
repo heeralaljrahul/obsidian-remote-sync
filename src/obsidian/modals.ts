@@ -10,7 +10,8 @@ const INTRO: Record<ReviewReason, string> = {
   "dry-run": "Dry run: nothing has been changed. This is what a sync would do right now.",
   "first-sync":
     "This is the first sync with this Drive folder on this device, so here is a dry run first. Nothing has been changed yet. The first sync never deletes anything: files that differ on both sides are listed as conflicts, and after the sync you choose which version to keep for each.",
-  "many-deletions": "This sync would move many files to the trash. Check the list before continuing (trashed files can be restored from the vault's .trash folder and from Google Drive's trash).",
+  "many-deletions":
+    "This sync would move many files to the trash. Check the list before continuing (trashed files can be restored from the vault's .trash folder and from Google Drive's trash).",
 };
 
 /** Shows a planned sync; resolves true if the user chose to run it. */
@@ -18,7 +19,11 @@ export class PlanReviewModal extends Modal {
   private resolve!: (run: boolean) => void;
   private decided = false;
 
-  constructor(app: App, private readonly plan: SyncPlan, private readonly reason: ReviewReason) {
+  constructor(
+    app: App,
+    private readonly plan: SyncPlan,
+    private readonly reason: ReviewReason
+  ) {
     super(app);
   }
 
@@ -87,7 +92,10 @@ export class PlanReviewModal extends Modal {
 export class LogModal extends Modal {
   private onlyProblems = false;
 
-  constructor(app: App, private readonly log: SyncLog) {
+  constructor(
+    app: App,
+    private readonly log: SyncLog
+  ) {
     super(app);
   }
 

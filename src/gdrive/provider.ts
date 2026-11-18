@@ -14,7 +14,10 @@ function toRemoteFile(f: DriveFile, path: string): RemoteFile {
 }
 
 class KVResumableStore implements ResumableStore {
-  constructor(private readonly kv: KVStore, private readonly ns: string) {}
+  constructor(
+    private readonly kv: KVStore,
+    private readonly ns: string
+  ) {}
   get(key: string) {
     return this.kv.get<ResumableSession>(`upload\u0000${this.ns}\u0000${key}`);
   }
@@ -33,7 +36,12 @@ export class GoogleDriveProvider implements RemoteProvider {
   private folderIds = new Map<string, string>();
   private lastNotes = new Set<string>();
 
-  constructor(private readonly api: DriveApi, kv: KVStore, readonly rootId: string, private readonly log: (level: "info" | "warn", msg: string) => void) {
+  constructor(
+    private readonly api: DriveApi,
+    kv: KVStore,
+    readonly rootId: string,
+    private readonly log: (level: "info" | "warn", msg: string) => void
+  ) {
     this.index = new RemoteIndex(api, kv, rootId);
     this.sessions = new KVResumableStore(kv, rootId);
   }
@@ -91,7 +99,8 @@ export class GoogleDriveProvider implements RemoteProvider {
     const parentId = await this.mkdir(parentOf(path));
     const name = baseName(path);
     const existing = (await this.api.findChildByName(parentId, name)).filter((f) => f.mimeType === FOLDER_MIME);
-    const f = existing.length > 0 ? existing.sort((a, b) => (a.createdTime ?? "").localeCompare(b.createdTime ?? ""))[0] : await this.api.createFolder(name, parentId);
+    const f =
+      existing.length > 0 ? existing.sort((a, b) => (a.createdTime ?? "").localeCompare(b.createdTime ?? ""))[0] : await this.api.createFolder(name, parentId);
     await this.index.upsert(f, parentId);
     this.folderIds.set(path, f.id);
     return f.id;

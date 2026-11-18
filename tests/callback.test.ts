@@ -49,13 +49,7 @@ describe("callback page (GitHub Pages) in a browser", function () {
     expect(await page.locator("#code").textContent()).to.equal("4/0Ab-c_d");
   });
 
-  const payloads = [
-    `"><img src=x onerror=alert(1)>`,
-    `<script>alert(1)</script>`,
-    `javascript:alert(1)`,
-    `'};alert(1);//`,
-    `&action=evil&code=x`,
-  ];
+  const payloads = [`"><img src=x onerror=alert(1)>`, `<script>alert(1)</script>`, `javascript:alert(1)`, `'};alert(1);//`, `&action=evil&code=x`];
   for (const p of payloads) {
     it(`hostile input is inert: ${p}`, async () => {
       const q = new URLSearchParams({ code: p, state: p, error: "" }).toString();

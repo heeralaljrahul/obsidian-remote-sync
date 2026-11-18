@@ -34,9 +34,15 @@ describe("network resilience", () => {
         refreshes++;
         return resp(200, { access_token: "new", expires_in: 3600 });
       }
-      return req.headers?.Authorization === "Bearer new" ? resp(200, { user: { emailAddress: "me@x", displayName: "Me" } }) : resp(401, { error: { message: "Invalid Credentials" } });
+      return req.headers?.Authorization === "Bearer new"
+        ? resp(200, { user: { emailAddress: "me@x", displayName: "Me" } })
+        : resp(401, { error: { message: "Invalid Credentials" } });
     };
-    const tm = new TokenManager(http, () => ({ clientId: "c", clientSecret: "s", tokens }), async (t) => void (tokens = t));
+    const tm = new TokenManager(
+      http,
+      () => ({ clientId: "c", clientSecret: "s", tokens }),
+      async (t) => void (tokens = t)
+    );
     const api = new DriveApi(http, (force) => tm.accessToken(force));
     expect((await api.about()).email).to.equal("me@x");
     expect(refreshes).to.equal(1);
@@ -103,10 +109,12 @@ describe("network resilience", () => {
   it("garbled JSON from Drive aborts the sync without deleting anything", async () => {
     drive.edit("from-drive.md", "changed");
     pc.vault.remove("n1.md");
-    drive.intercept = (req) => (req.url.includes("/changes?") ? { status: 200, headers: {}, text: "<html>proxy error", arrayBuffer: new ArrayBuffer(0) } : undefined);
+    drive.intercept = (req) =>
+      req.url.includes("/changes?") ? { status: 200, headers: {}, text: "<html>proxy error", arrayBuffer: new ArrayBuffer(0) } : undefined;
     // a bad changes feed falls back to a full rescan, which also gets garbage here:
     const realIntercept = drive.intercept;
-    drive.intercept = (req) => realIntercept(req) ?? (req.url.includes("/files?") ? { status: 200, headers: {}, text: "{not json", arrayBuffer: new ArrayBuffer(0) } : undefined);
+    drive.intercept = (req) =>
+      realIntercept(req) ?? (req.url.includes("/files?") ? { status: 200, headers: {}, text: "{not json", arrayBuffer: new ArrayBuffer(0) } : undefined);
     let err: unknown;
     try {
       await pc.sync();
@@ -139,7 +147,10 @@ describe("network resilience", () => {
 
   it("a corrupted or truncated download is detected (MD5) and never written", async () => {
     drive.edit("from-drive.md", "the real content");
-    drive.intercept = (req) => (req.url.includes("alt=media") ? { status: 200, headers: {}, text: "the real cont", arrayBuffer: new TextEncoder().encode("the real cont").buffer as ArrayBuffer } : undefined);
+    drive.intercept = (req) =>
+      req.url.includes("alt=media")
+        ? { status: 200, headers: {}, text: "the real cont", arrayBuffer: new TextEncoder().encode("the real cont").buffer as ArrayBuffer }
+        : undefined;
     const { res } = await pc.sync();
     expect(res.skipped.map((s) => s.reason)).to.include("remote file changed during sync");
     expect(pc.vault.text("from-drive.md")).to.equal("d");
@@ -155,7 +166,15 @@ describe("network resilience", () => {
         // Drive "stores" something else
         const f = [...drive.files.values()].find((x) => x.name === "n0.md")!;
         f.content = new TextEncoder().encode("garbage");
-        return resp(200, { id: f.id, name: f.name, mimeType: "text/markdown", md5Checksum: "0".repeat(32), size: "7", modifiedTime: new Date().toISOString(), parents: f.parents });
+        return resp(200, {
+          id: f.id,
+          name: f.name,
+          mimeType: "text/markdown",
+          md5Checksum: "0".repeat(32),
+          size: "7",
+          modifiedTime: new Date().toISOString(),
+          parents: f.parents,
+        });
       }
       return undefined;
     };
@@ -195,7 +214,10 @@ describe("network resilience", () => {
 
   it("a plain 403 (no permission) is not retried in a loop", async () => {
     let calls = 0;
-    drive.intercept = () => (calls++, resp(403, { error: { errors: [{ reason: "insufficientFilePermissions" }], message: "The user does not have sufficient permissions" } }));
+    drive.intercept = () => (
+      calls++,
+      resp(403, { error: { errors: [{ reason: "insufficientFilePermissions" }], message: "The user does not have sufficient permissions" } })
+    );
     try {
       await pc.sync();
     } catch {

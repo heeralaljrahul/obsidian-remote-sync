@@ -1,6 +1,9 @@
 /** Normalise a vault-relative path into the key form used everywhere in the engine. */
 export function normKey(p: string): string {
-  let s = p.normalize("NFC").replace(/\\/g, "/").replace(/\/{2,}/g, "/");
+  let s = p
+    .normalize("NFC")
+    .replace(/\\/g, "/")
+    .replace(/\/{2,}/g, "/");
   if (s.startsWith("/")) s = s.slice(1);
   if (s.endsWith("/")) s = s.slice(0, -1);
   return s;
@@ -55,7 +58,7 @@ export function unsafeNameReason(name: string): string | null {
   if (name === "." || name === "..") return `name "${name}" is not allowed`;
   // eslint-disable-next-line no-control-regex
   if (/[\u0000-\u001f\u007f]/.test(name)) return "name contains control characters";
-  if (/[\\/:*?"<>|]/.test(name)) return 'name contains a character Obsidian doesn\'t allow (\\ / : * ? " < > |)';
+  if (/[\\/:*?"<>|]/.test(name)) return "name contains a character Obsidian doesn't allow (\\ / : * ? \" < > |)";
   return null;
 }
 

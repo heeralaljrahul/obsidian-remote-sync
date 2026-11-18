@@ -11,7 +11,7 @@
  * Each choice first re-checks that neither side changed since the user looked
  * at the diff; if one did, nothing happens and the user is asked to re-check.
  */
-import type { SyncLog } from "../log";
+import { errMsg, type SyncLog } from "../log";
 import { assertSafeVaultPath, baseName, joinPath, parentOf } from "./paths";
 import type { BaseStore } from "./store";
 import { PreconditionError, type LocalFile, type LocalFs, type RemoteFile, type RemoteProvider } from "./types";
@@ -129,10 +129,16 @@ export async function resolveConflict(c: ConflictItem, choice: Resolution, deps:
     const copyHash = md5(copyData);
     const copySt = await local.stat(copy);
     const rf = await remote.upload(copy, copyData, undefined, copyHash);
-    await putBase(copy, copyHash, rf, copySt && copySt.size === copyData.byteLength ? { mtime: copySt.mtime, size: copySt.size } : undefined, copyData.byteLength);
+    await putBase(
+      copy,
+      copyHash,
+      rf,
+      copySt && copySt.size === copyData.byteLength ? { mtime: copySt.mtime, size: copySt.size } : undefined,
+      copyData.byteLength
+    );
   } catch (e) {
     // Not a problem: the next sync uploads it as a new file.
-    log.warn(`conflict copy ${copy} will be uploaded on the next sync (${e instanceof Error ? e.message : e})`);
+    log.warn(`conflict copy ${copy} will be uploaded on the next sync (${errMsg(e)})`);
   }
   return `Kept both. This device's version is now "${baseName(copy)}".`;
 }

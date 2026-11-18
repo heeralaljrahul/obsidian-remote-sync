@@ -85,7 +85,10 @@ export interface ResumableStore {
 }
 
 export class DriveApi {
-  constructor(private readonly http: HttpFn, private readonly token: (forceRefresh?: boolean) => Promise<string>) {}
+  constructor(
+    private readonly http: HttpFn,
+    private readonly token: (forceRefresh?: boolean) => Promise<string>
+  ) {}
 
   /** Authorized request. Retries once with a fresh token on 401. Throws HttpError for non-2xx (except `okStatuses`). */
   async call(
@@ -110,13 +113,17 @@ export class DriveApi {
   }
 
   async about(): Promise<{ email: string; name: string }> {
-    const r = parseJson<{ user: { emailAddress: string; displayName: string } }>(await this.call("GET", `${API}/about`, { query: { fields: "user(emailAddress,displayName)" } }));
+    const r = parseJson<{ user: { emailAddress: string; displayName: string } }>(
+      await this.call("GET", `${API}/about`, { query: { fields: "user(emailAddress,displayName)" } })
+    );
     return { email: r.user.emailAddress, name: r.user.displayName };
   }
 
   async getFile(id: string): Promise<DriveFile | null> {
     try {
-      return parseJson<DriveFile>(await this.call("GET", `${API}/files/${encodeURIComponent(id)}`, { query: { fields: FILE_FIELDS, supportsAllDrives: "true" } }));
+      return parseJson<DriveFile>(
+        await this.call("GET", `${API}/files/${encodeURIComponent(id)}`, { query: { fields: FILE_FIELDS, supportsAllDrives: "true" } })
+      );
     } catch (e) {
       if (e instanceof HttpError && e.status === 404) return null;
       throw e;
@@ -246,7 +253,11 @@ export class DriveApi {
       }
       const { body, contentType } = multipartBody({ name: a.name, parents: [a.parentId], mimeType: mime }, a.data, mime);
       return parseJson<DriveFile>(
-        await this.call("POST", `${UPLOAD_API}/files`, { query: { uploadType: "multipart", fields: FILE_FIELDS, supportsAllDrives: "true" }, contentType, body })
+        await this.call("POST", `${UPLOAD_API}/files`, {
+          query: { uploadType: "multipart", fields: FILE_FIELDS, supportsAllDrives: "true" },
+          contentType,
+          body,
+        })
       );
     }
     return this.resumableUpload(a, mime, sessions);
@@ -276,12 +287,16 @@ export class DriveApi {
     }
 
     if (!uri) {
-      const init = await this.call(a.existingId ? "PATCH" : "POST", a.existingId ? `${UPLOAD_API}/files/${encodeURIComponent(a.existingId)}` : `${UPLOAD_API}/files`, {
-        query: { uploadType: "resumable", fields: FILE_FIELDS, supportsAllDrives: "true" },
-        contentType: "application/json; charset=UTF-8",
-        headers: { "X-Upload-Content-Type": mime, "X-Upload-Content-Length": String(total) },
-        body: JSON.stringify(a.existingId ? {} : { name: a.name, parents: [a.parentId], mimeType: mime }),
-      });
+      const init = await this.call(
+        a.existingId ? "PATCH" : "POST",
+        a.existingId ? `${UPLOAD_API}/files/${encodeURIComponent(a.existingId)}` : `${UPLOAD_API}/files`,
+        {
+          query: { uploadType: "resumable", fields: FILE_FIELDS, supportsAllDrives: "true" },
+          contentType: "application/json; charset=UTF-8",
+          headers: { "X-Upload-Content-Type": mime, "X-Upload-Content-Length": String(total) },
+          body: JSON.stringify(a.existingId ? {} : { name: a.name, parents: [a.parentId], mimeType: mime }),
+        }
+      );
       uri = init.headers["location"];
       if (!uri) throw new Error("Drive did not return a resumable upload URL");
       await sessions?.set(a.sessionKey, { uri, md5: a.md5, size: total, createdAt: Date.now() });
@@ -328,8 +343,9 @@ function nextOffset(res: HttpResponse): number {
 
 function extractReason(text: string): string {
   try {
-    const j = JSON.parse(text);
-    return j?.error?.message ?? j?.error_description ?? "";
+    const j = JSON.parse(text) as { error?: { message?: string } | string; error_description?: string } | null;
+    if (j && typeof j.error === "object" && typeof j.error.message === "string") return j.error.message;
+    return typeof j?.error_description === "string" ? j.error_description : "";
   } catch {
     return "";
   }

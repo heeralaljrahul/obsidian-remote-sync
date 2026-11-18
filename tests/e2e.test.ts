@@ -31,7 +31,14 @@ describe("end-to-end: built main.js in a browser with a fake Obsidian", function
     }
     execFileSync("node", ["esbuild.config.mjs", "production"], { cwd: root, stdio: "ignore" });
     const esbuild = req("esbuild");
-    const harness = esbuild.buildSync({ entryPoints: [join(root, "tests/e2e/harness.ts")], bundle: true, write: false, platform: "browser", format: "iife", target: "es2020" }).outputFiles[0].text;
+    const harness = esbuild.buildSync({
+      entryPoints: [join(root, "tests/e2e/harness.ts")],
+      bundle: true,
+      write: false,
+      platform: "browser",
+      format: "iife",
+      target: "es2020",
+    }).outputFiles[0].text;
     const mainJs = readFileSync(join(root, "main.js"), "utf8");
     browser = await pw!.chromium.launch();
     const ctx = await browser.newContext({ viewport: { width: 430, height: 932 } });
@@ -45,7 +52,9 @@ describe("end-to-end: built main.js in a browser with a fake Obsidian", function
     await page.addStyleTag({ content: readFileSync(join(root, "styles.css"), "utf8") });
     await page.addScriptTag({ content: harness });
     // Load the REAL bundle exactly as Obsidian does: CommonJS with only `obsidian` available.
-    await page.addScriptTag({ content: `(function(){var module={exports:{}};var exports=module.exports;\n${mainJs}\n;window.__PluginClass=module.exports.default||module.exports;})();` });
+    await page.addScriptTag({
+      content: `(function(){var module={exports:{}};var exports=module.exports;\n${mainJs}\n;window.__PluginClass=module.exports.default||module.exports;})();`,
+    });
   });
 
   after(async () => {
@@ -56,7 +65,8 @@ describe("end-to-end: built main.js in a browser with a fake Obsidian", function
     expect(errors, "no uncaught errors in the page").to.deep.equal([]);
   });
 
-  const ev = <T>(fn: string, arg?: unknown): Promise<T> => page.evaluate(new Function("arg", `return (async () => { const E = window.E2E; ${fn} })()`) as (a: unknown) => Promise<T>, arg);
+  const ev = <T>(fn: string, arg?: unknown): Promise<T> =>
+    page.evaluate(new Function("arg", `return (async () => { const E = window.E2E; ${fn} })()`) as (a: unknown) => Promise<T>, arg);
 
   it("loads with nothing but the obsidian module (no Node/Electron), registers ribbon, commands and protocol handler", async () => {
     const r = await ev<{ cmds: string[]; ribbon: string; handler: boolean }>(`
@@ -74,9 +84,14 @@ describe("end-to-end: built main.js in a browser with a fake Obsidian", function
   });
 
   it("settings UI: enter client ID/secret, sign in with Google (PKCE verified by the fake server), pick the folder", async () => {
-    await ev(`const d = E.devices.pc; const tab = d.plugin.__tabs[0]; tab.containerEl.id = "settings"; document.body.appendChild(tab.containerEl); tab.display();`);
+    await ev(
+      `const d = E.devices.pc; const tab = d.plugin.__tabs[0]; tab.containerEl.id = "settings"; document.body.appendChild(tab.containerEl); tab.display();`
+    );
     const fill = async (name: string, value: string) => {
-      const input = page.locator(".setting-item", { has: page.locator(".setting-item-name", { hasText: name }) }).locator("input").first();
+      const input = page
+        .locator(".setting-item", { has: page.locator(".setting-item-name", { hasText: name }) })
+        .locator("input")
+        .first();
       await input.fill(value);
     };
     await fill("OAuth client ID", "e2e-client.apps.googleusercontent.com");
@@ -91,18 +106,24 @@ describe("end-to-end: built main.js in a browser with a fake Obsidian", function
     expect(await ev<unknown>(`return !!E.settings(E.devices.pc).pendingAuth`)).to.equal(true, "verifier saved before leaving the app");
 
     await ev(`await E.completeGoogleSignIn(E.devices.pc)`);
-    const s = await ev<{ email: string; rt: string; pending: unknown }>(`const s = E.settings(E.devices.pc); return { email: s.accountEmail, rt: s.tokens && s.tokens.refreshToken, pending: s.pendingAuth }`);
+    const s = await ev<{ email: string; rt: string; pending: unknown }>(
+      `const s = E.settings(E.devices.pc); return { email: s.accountEmail, rt: s.tokens && s.tokens.refreshToken, pending: s.pendingAuth }`
+    );
     expect(s.email).to.equal("me@example.com");
     expect(s.rt).to.match(/^1\/\/e2e-refresh-/);
     expect(s.pending).to.equal(null);
 
     await ev(`const t = E.devices.pc.plugin.__tabs[0]; t.display();`);
-    await expect(page.locator(".setting-item-name", { hasText: "Signed in as me@example.com" })).to.be.ok;
+    expect(await page.locator(".setting-item-name", { hasText: "Signed in as me@example.com" }).count()).to.equal(1);
     expect(await page.locator(".setting-item-description", { hasText: "No expiry" }).count()).to.equal(1);
 
     await fill("Folder ID or link", "https://drive.google.com/drive/folders/VAULT_ROOT?usp=sharing");
     await page.getByRole("button", { name: "Use ID" }).click();
-    await page.waitForFunction(() => (window as unknown as { E2E: { devices: Record<string, { plugin: { settings: { folderId: string } } }> } }).E2E.devices.pc.plugin.settings.folderId === "VAULT_ROOT");
+    await page.waitForFunction(
+      () =>
+        (window as unknown as { E2E: { devices: Record<string, { plugin: { settings: { folderId: string } } }> } }).E2E.devices.pc.plugin.settings.folderId ===
+        "VAULT_ROOT"
+    );
     await ev(`document.getElementById("settings").remove()`);
   });
 
@@ -142,7 +163,9 @@ describe("end-to-end: built main.js in a browser with a fake Obsidian", function
     await page.getByRole("button", { name: "Keep both", exact: true }).click();
     await page.locator(".gdvs-resolved").waitFor();
     await page.getByRole("button", { name: "Close" }).click();
-    const r = await ev<{ local: string[]; drive: Record<string, string> }>(`return { local: [...E.devices.pc.vault.files.keys()].sort(), drive: Object.fromEntries(E.drive.tree()) }`);
+    const r = await ev<{ local: string[]; drive: Record<string, string> }>(
+      `return { local: [...E.devices.pc.vault.files.keys()].sort(), drive: Object.fromEntries(E.drive.tree()) }`
+    );
     const copy = r.local.find((p) => p.startsWith("Ideas (conflict "))!;
     expect(copy).to.match(/^Ideas \(conflict \d{4}-\d{2}-\d{2} \d{4}\)\.md$/);
     expect(r.drive["Ideas.md"]).to.equal("Drive version");
@@ -150,7 +173,9 @@ describe("end-to-end: built main.js in a browser with a fake Obsidian", function
   });
 
   it("everyday sync via the command; status bar on desktop; data is persisted in real IndexedDB", async () => {
-    await ev(`const d = E.devices.pc; d.vault.userWrite("New note.md", "hello"); d.plugin.__commands.find(c => c.id === "sync-now").callback(); await new Promise(r => setTimeout(r, 20)); await E.waitIdle(d);`);
+    await ev(
+      `const d = E.devices.pc; d.vault.userWrite("New note.md", "hello"); d.plugin.__commands.find(c => c.id === "sync-now").callback(); await new Promise(r => setTimeout(r, 20)); await E.waitIdle(d);`
+    );
     expect(await ev<string>(`return E.drive.read("New note.md")`)).to.equal("hello");
     expect(await ev<string>(`return E.devices.pc.plugin.__statusBar[0].textContent`)).to.match(/^Drive: synced/);
     const dbs = await page.evaluate(async () => (await indexedDB.databases()).map((d) => d.name));
@@ -184,15 +209,30 @@ describe("end-to-end: built main.js in a browser with a fake Obsidian", function
       const tab = ph.plugin.__tabs[0]; tab.containerEl.id = "settings"; document.body.appendChild(tab.containerEl); tab.display();
       window.__rt = rt;`);
     const fill = async (name: string, value: string) =>
-      page.locator("#settings .setting-item", { has: page.locator(".setting-item-name", { hasText: name }) }).locator("input").first().fill(value);
+      page
+        .locator("#settings .setting-item", { has: page.locator(".setting-item-name", { hasText: name }) })
+        .locator("input")
+        .first()
+        .fill(value);
     await fill("OAuth client ID", "e2e-client.apps.googleusercontent.com");
     await fill("OAuth client secret", "GOCSPX-e2e-secret");
     await fill("Paste refresh token", await ev<string>(`return window.__rt`));
-    await page.locator("#settings .setting-item", { has: page.locator(".setting-item-name", { hasText: "Paste refresh token" }) }).getByRole("button", { name: "Save" }).click();
-    await page.waitForFunction(() => (window as unknown as { E2E: { devices: Record<string, { plugin: { settings: { accountEmail: string } } }> } }).E2E.devices.iphone.plugin.settings.accountEmail === "me@example.com");
+    await page
+      .locator("#settings .setting-item", { has: page.locator(".setting-item-name", { hasText: "Paste refresh token" }) })
+      .getByRole("button", { name: "Save" })
+      .click();
+    await page.waitForFunction(
+      () =>
+        (window as unknown as { E2E: { devices: Record<string, { plugin: { settings: { accountEmail: string } } }> } }).E2E.devices.iphone.plugin.settings
+          .accountEmail === "me@example.com"
+    );
     await fill("Folder ID or link", "VAULT_ROOT");
     await page.locator("#settings").getByRole("button", { name: "Use ID" }).click();
-    await page.waitForFunction(() => (window as unknown as { E2E: { devices: Record<string, { plugin: { settings: { folderId: string } } }> } }).E2E.devices.iphone.plugin.settings.folderId === "VAULT_ROOT");
+    await page.waitForFunction(
+      () =>
+        (window as unknown as { E2E: { devices: Record<string, { plugin: { settings: { folderId: string } } }> } }).E2E.devices.iphone.plugin.settings
+          .folderId === "VAULT_ROOT"
+    );
     expect(await page.locator("#settings").innerText()).to.contain("iOS does not let plugins sync in the background");
     await ev(`document.getElementById("settings").remove(); E.devices.iphone.plugin.__ribbons[0].click();`);
     await page.locator(".modal-title", { hasText: "Review your first sync" }).waitFor();
@@ -213,7 +253,9 @@ describe("end-to-end: built main.js in a browser with a fake Obsidian", function
       await new Promise(r => setTimeout(r, 30)); await E.waitIdle(ph);
       Object.defineProperty(document, "visibilityState", { value: "visible", configurable: true });`);
     expect(await ev<string>(`return E.drive.read("Ideas.md")`)).to.equal("edited on iPhone");
-    await ev(`const pc = E.devices.pc; pc.plugin.__commands.find(c => c.id === "sync-now").callback(); await new Promise(r => setTimeout(r, 20)); await E.waitIdle(pc);`);
+    await ev(
+      `const pc = E.devices.pc; pc.plugin.__commands.find(c => c.id === "sync-now").callback(); await new Promise(r => setTimeout(r, 20)); await E.waitIdle(pc);`
+    );
     expect(await ev<string>(`return E.devices.pc.vault.read("Ideas.md")`)).to.equal("edited on iPhone");
   });
 

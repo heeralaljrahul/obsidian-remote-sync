@@ -385,7 +385,16 @@ describe("sync scenarios (mock Google Drive)", () => {
       const second = [...drive.files.values()].find((f) => f.name === "Proj")!;
       drive.files.set("dupfolder", { ...second, id: "dupfolder", createdTime: second.createdTime + 5000 });
       drive.addFile("Proj/b.md", "b"); // lands in the first folder
-      drive.files.set("inDup", { id: "inDup", name: "c.md", mimeType: "text/markdown", parents: ["dupfolder"], content: new TextEncoder().encode("c"), modifiedTime: 1, createdTime: 1, trashed: false });
+      drive.files.set("inDup", {
+        id: "inDup",
+        name: "c.md",
+        mimeType: "text/markdown",
+        parents: ["dupfolder"],
+        content: new TextEncoder().encode("c"),
+        modifiedTime: 1,
+        createdTime: 1,
+        trashed: false,
+      });
       await pc.sync();
       expect([...pc.vault.files.keys()].sort()).to.deep.equal(["Proj/a.md", "Proj/b.md", "Proj/c.md"]);
       pc.vault.put("Proj/new.md", "n");
@@ -550,7 +559,10 @@ describe("sync scenarios (mock Google Drive)", () => {
       sameDeviceOtherFolder.vault = pc.vault;
       sameDeviceOtherFolder.kv = pc.kv;
       // Different folder ID -> different base namespace:
-      (sameDeviceOtherFolder as unknown as { deps: () => ReturnType<Device["deps"]> }).deps = () => ({ ...Device.prototype.deps.call(sameDeviceOtherFolder), namespace: "OTHER_FOLDER" });
+      (sameDeviceOtherFolder as unknown as { deps: () => ReturnType<Device["deps"]> }).deps = () => ({
+        ...Device.prototype.deps.call(sameDeviceOtherFolder),
+        namespace: "OTHER_FOLDER",
+      });
       const { prep } = await sameDeviceOtherFolder.sync();
       expect(prep.plan.firstSync).to.equal(true);
       expect(prep.plan.actions.filter(isDeletion)).to.deep.equal([]);

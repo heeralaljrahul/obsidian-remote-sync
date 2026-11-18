@@ -22,6 +22,8 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      # Static analysis (ESLint, type-aware) and formatting
+      - run: npm run lint
       # Chromium for the end-to-end tests of the built main.js and the callback page
       - run: npx playwright install --with-deps chromium
       # Unit, integration, security, network, stress, fuzz (150 scenarios), e2e, live Google probes

@@ -1,3 +1,5 @@
+import { errMsg } from "../log";
+
 /**
  * Transport abstraction. In the plugin this is backed by Obsidian's
  * `requestUrl` (src/obsidian/obsidianHttp.ts), which bypasses CORS on desktop
@@ -22,7 +24,11 @@ export interface HttpResponse {
 export type HttpFn = (req: HttpRequest) => Promise<HttpResponse>;
 
 export class HttpError extends Error {
-  constructor(readonly status: number, readonly body: string, message: string) {
+  constructor(
+    readonly status: number,
+    readonly body: string,
+    message: string
+  ) {
     super(message);
     this.name = "HttpError";
   }
@@ -96,17 +102,15 @@ export function withRetry(http: HttpFn, opts: RetryOptions = {}): HttpFn {
       } catch (e) {
         netErr = e;
       }
-      const retry = isNonIdempotent(req)
-        ? res !== undefined && isRateLimited(res)
-        : netErr !== undefined || (res !== undefined && isRetryable(res));
+      const retry = isNonIdempotent(req) ? res !== undefined && isRateLimited(res) : netErr !== undefined || (res !== undefined && isRetryable(res));
       if (!retry || attempt >= maxRetries || opts.giveUp?.()) {
-        if (netErr !== undefined) throw netErr;
+        if (netErr !== undefined) throw netErr instanceof Error ? netErr : new Error(errMsg(netErr));
         return res!;
       }
       let delay = Math.min(cap, base * 2 ** attempt) + Math.floor(rnd() * 1000);
       const ra = res?.headers["retry-after"];
       if (ra && /^\d+$/.test(ra)) delay = Math.max(delay, Number(ra) * 1000);
-      opts.onRetry?.(attempt + 1, delay, netErr !== undefined ? String(netErr) : `HTTP ${res!.status}`);
+      opts.onRetry?.(attempt + 1, delay, netErr !== undefined ? errMsg(netErr) : `HTTP ${res!.status}`);
       await doSleep(delay);
     }
   };

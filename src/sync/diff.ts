@@ -176,7 +176,32 @@ export function sideBySide(ops: DiffOp[]): SideRow[] {
   return rows;
 }
 
-const TEXT_EXT = new Set(["md", "markdown", "txt", "canvas", "json", "css", "js", "ts", "csv", "tsv", "html", "htm", "xml", "svg", "yml", "yaml", "toml", "ini", "base", "excalidraw", "tex", "bib", "org", "log"]);
+const TEXT_EXT = new Set([
+  "md",
+  "markdown",
+  "txt",
+  "canvas",
+  "json",
+  "css",
+  "js",
+  "ts",
+  "csv",
+  "tsv",
+  "html",
+  "htm",
+  "xml",
+  "svg",
+  "yml",
+  "yaml",
+  "toml",
+  "ini",
+  "base",
+  "excalidraw",
+  "tex",
+  "bib",
+  "org",
+  "log",
+]);
 
 /** Decode a file for diffing, or null if it looks binary. */
 export function decodeText(path: string, data: ArrayBuffer): string | null {
@@ -185,7 +210,7 @@ export function decodeText(path: string, data: ArrayBuffer): string | null {
   if (!TEXT_EXT.has(ext) && bytes.includes(0)) return null;
   try {
     const s = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
-    return s.includes("\u0000") ? null : s.replace(/^﻿/, "");
+    return s.includes("\u0000") ? null : s.replace(/^\uFEFF/, "");
   } catch {
     return null;
   }

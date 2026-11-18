@@ -25,7 +25,11 @@ export class ConflictModal extends Modal {
   private done = new Map<string, string>();
   private view: "unified" | "split";
 
-  constructor(app: App, private readonly items: ConflictItem[], private readonly h: ConflictHandlers) {
+  constructor(
+    app: App,
+    private readonly items: ConflictItem[],
+    private readonly h: ConflictHandlers
+  ) {
     super(app);
     this.view = !Platform.isMobile && window.innerWidth >= 900 ? "split" : "unified";
   }
@@ -144,7 +148,7 @@ export class ConflictModal extends Modal {
     const choices: Array<[Resolution, string, string, boolean]> = [
       ["keep-local", "Keep this device's version", "Replaces the Drive version (Drive keeps the old one in its version history).", false],
       ["keep-remote", "Keep the Drive version", "Replaces this device's version (it is moved to the vault's .trash).", false],
-      ["keep-both", "Keep both", "The Drive version keeps the name; this device's version is saved as \"… (conflict date).ext\".", true],
+      ["keep-both", "Keep both", 'The Drive version keeps the name; this device\'s version is saved as "… (conflict date).ext".', true],
     ];
     for (const [choice, label, desc, cta] of choices) {
       new Setting(contentEl)

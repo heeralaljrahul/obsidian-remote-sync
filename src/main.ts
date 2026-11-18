@@ -8,7 +8,7 @@ import { LocalForageKV } from "./obsidian/kv";
 import { ObsidianLocalFs } from "./obsidian/localFs";
 import { obsidianHttp } from "./obsidian/obsidianHttp";
 import { GDriveSettingTab } from "./obsidian/settingTab";
-import { DEFAULT_SETTINGS, type GDriveSettings } from "./settings";
+import { sanitizeSettings, type GDriveSettings } from "./settings";
 import { md5Hex, prepare, runPlan, safetyCheck, type EngineDeps } from "./sync/engine";
 import { IgnoreFilter } from "./sync/ignore";
 import { isDeletion, summarize } from "./sync/planner";
@@ -122,7 +122,7 @@ export default class GDriveSyncPlugin extends Plugin {
   }
 
   async loadSettings() {
-    this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+    this.settings = sanitizeSettings(await this.loadData());
     if (!this.settings.installId) {
       this.settings.installId = randomString(12);
       await this.saveSettings();
@@ -343,7 +343,10 @@ export default class GDriveSyncPlugin extends Plugin {
       if (review) {
         if (!manual) {
           // Never run a first sync or a mass deletion unattended.
-          const why = review === "first-sync" ? "The first sync needs your review" : `This sync would trash ${prep.plan.actions.filter(isDeletion).length} items and needs your review`;
+          const why =
+            review === "first-sync"
+              ? "The first sync needs your review"
+              : `This sync would trash ${prep.plan.actions.filter(isDeletion).length} items and needs your review`;
           this.log.warn(`${why}; automatic sync paused until you tap the sync icon`);
           if (!this.reviewNoticeShown) new Notice(`Google Drive: ${why}. Tap the sync icon to review it.`, 10000);
           this.reviewNoticeShown = true;
@@ -351,7 +354,8 @@ export default class GDriveSyncPlugin extends Plugin {
         }
         // Full plan in the log (capped) so it can be read later on the phone.
         const MAX_LINES = 500;
-        for (const a of prep.plan.actions.slice(0, MAX_LINES)) this.log.info(`[${review}] ${JSON.stringify(a, ["kind", "path", "from", "to", "reason", "type"])}`);
+        for (const a of prep.plan.actions.slice(0, MAX_LINES))
+          this.log.info(`[${review}] ${JSON.stringify(a, ["kind", "path", "from", "to", "reason", "type"])}`);
         if (prep.plan.actions.length > MAX_LINES) this.log.info(`[${review}] …and ${prep.plan.actions.length - MAX_LINES} more actions`);
         this.log.info(`waiting for review (${review}): ${JSON.stringify(counts)}`);
         this.updateStatus("waiting for your review");
@@ -372,11 +376,21 @@ export default class GDriveSyncPlugin extends Plugin {
       // Synced settings/plugins only take effect after a restart.
       const cfg = this.app.vault.configDir + "/";
       const failedPaths = new Set([...res.failed, ...res.skipped].map((f) => ("path" in f.action ? f.action.path : f.action.to)));
-      const cfgChanged = prep.plan.actions.some((a) => (a.kind === "download" || a.kind === "trashLocal") && a.path.startsWith(cfg) && !failedPaths.has(a.path));
+      const cfgChanged = prep.plan.actions.some(
+        (a) => (a.kind === "download" || a.kind === "trashLocal") && a.path.startsWith(cfg) && !failedPaths.has(a.path)
+      );
       if (cfgChanged) new Notice("Google Drive: settings or plugins were updated from another device. Restart Obsidian to apply them.", 12000);
-      const msg = `Sync finished: ${res.done} change(s)` + (res.conflicts.length ? `, ${res.conflicts.length} conflict(s) left untouched` : "") + (res.skipped.length ? `, ${res.skipped.length} skipped` : "") + (res.failed.length ? `, ${res.failed.length} FAILED` : "") + (res.stopped ? " (stopped early, will resume)" : "");
+      const msg =
+        `Sync finished: ${res.done} change(s)` +
+        (res.conflicts.length ? `, ${res.conflicts.length} conflict(s) left untouched` : "") +
+        (res.skipped.length ? `, ${res.skipped.length} skipped` : "") +
+        (res.failed.length ? `, ${res.failed.length} FAILED` : "") +
+        (res.stopped ? " (stopped early, will resume)" : "");
       this.log.info(msg);
-      const conflictKey = res.conflicts.map((c) => ("path" in c ? c.path : "")).sort().join("\n");
+      const conflictKey = res.conflicts
+        .map((c) => ("path" in c ? c.path : ""))
+        .sort()
+        .join("\n");
       const newConflicts = conflictKey !== "" && conflictKey !== this.lastConflictKey;
       this.lastConflictKey = conflictKey;
       if (manual || res.failed.length > 0) new Notice(msg, 8000);
@@ -440,7 +454,13 @@ export default class GDriveSyncPlugin extends Plugin {
         if (this.running) throw new Error("a sync is running; try again in a moment");
         this.running = true;
         try {
-          return await resolveConflict(c, choice, { local: deps.local, remote: deps.remote, base: new BaseStore(this.kv, this.settings.folderId), log: this.log, md5: md5Hex });
+          return await resolveConflict(c, choice, {
+            local: deps.local,
+            remote: deps.remote,
+            base: new BaseStore(this.kv, this.settings.folderId),
+            log: this.log,
+            md5: md5Hex,
+          });
         } finally {
           this.running = false;
           this.lastConflictKey = "";

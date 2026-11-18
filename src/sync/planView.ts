@@ -32,7 +32,10 @@ function item(a: Action): PlanItem {
     case "upload":
       return { label: a.path, detail: `${REASON[a.reason]} · ${formatBytes(a.local.size)}` };
     case "download":
-      return { label: a.path, detail: `${a.reason === "restore" ? "deleted here but edited in Drive, so it is restored" : REASON[a.reason]} · ${formatBytes(a.remote.size)}` };
+      return {
+        label: a.path,
+        detail: `${a.reason === "restore" ? "deleted here but edited in Drive, so it is restored" : REASON[a.reason]} · ${formatBytes(a.remote.size)}`,
+      };
     case "trashLocal":
       return { label: a.path, detail: "deleted in Drive → moved to this vault's .trash" };
     case "trashRemote":
@@ -73,7 +76,12 @@ const SECTIONS: Array<{ key: string; title: string; warn: boolean; match: (a: Ac
   { key: "move", title: "Renames / moves", warn: false, match: (a) => a.kind === "moveLocal" || a.kind === "moveRemote" },
   { key: "skip", title: "Skipped", warn: false, match: (a) => a.kind === "skip" },
   { key: "folder", title: "New folders", warn: false, match: (a) => a.kind === "mkdirLocal" || a.kind === "mkdirRemote" },
-  { key: "bookkeeping", title: "Already in sync (bookkeeping only)", warn: false, match: (a) => a.kind === "adopt" || a.kind === "adoptFolder" || a.kind === "forget" },
+  {
+    key: "bookkeeping",
+    title: "Already in sync (bookkeeping only)",
+    warn: false,
+    match: (a) => a.kind === "adopt" || a.kind === "adoptFolder" || a.kind === "forget",
+  },
 ];
 
 export function planSections(plan: SyncPlan): PlanSection[] {

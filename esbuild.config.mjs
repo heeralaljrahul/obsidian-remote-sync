@@ -4,7 +4,11 @@ import process from "process";
 const prod = process.argv[2] === "production";
 
 const ctx = await esbuild.context({
-  banner: { js: "/* Google Drive Vault Sync — bundled file. Source: https://github.com/heeralaljrahul/obsidian-remote-sync (Apache-2.0) */" },
+  banner: {
+    js: "/* Google Drive Vault Sync by heeralaljrahul (Apache-2.0). Fork of remotely-sync (sboesen) / remotely-save (fyears). Source and full credits: https://github.com/heeralaljrahul/obsidian-remote-sync — third-party licenses: THIRD_PARTY_NOTICES.md */",
+  },
+  // Keep the license headers of bundled libraries (localForage, spark-md5) in main.js.
+  legalComments: "eof",
   entryPoints: ["src/main.ts"],
   bundle: true,
   // Only Obsidian's own module is external. Everything else must bundle for the

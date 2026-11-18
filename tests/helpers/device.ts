@@ -112,7 +112,10 @@ export class Device {
   /** test hook: stop the executor after N actions (simulates iOS suspending the app) */
   stopAfter: number | null = null;
 
-  constructor(readonly drive: FakeDrive, opts: DeviceOptions = {}) {
+  constructor(
+    readonly drive: FakeDrive,
+    opts: DeviceOptions = {}
+  ) {
     this.opts = { syncConfigDir: false, patterns: DEFAULT_IGNORE_PATTERNS, maxFileSize: 0, ...opts };
     this.provider = this.makeProvider();
     // keep the test output clean

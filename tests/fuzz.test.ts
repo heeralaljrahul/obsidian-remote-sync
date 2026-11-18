@@ -111,7 +111,7 @@ export async function runScenario(seed: number, steps: number, trace?: (w: World
   for (const [i, d] of devices.entries()) d.vault.put(`keep-${i}.md`, token(`keep${i}`));
 
   let failureRate = 0;
-  drive.intercept = (req) => {
+  drive.intercept = () => {
     if (r() < failureRate) {
       const k = r();
       if (k < 0.4) return { status: 503, headers: {}, text: '{"error":{"message":"backendError"}}', arrayBuffer: new ArrayBuffer(0) };
@@ -228,7 +228,10 @@ describe("randomized multi-device sync (system / fuzz)", function () {
         expect(Object.fromEntries(d.vault.tree()), `device ${i} != Drive\n${ctx()}`).to.deep.equal(Object.fromEntries(driveTree));
         for (const p of d.vault.files.keys()) expect(isSafeVaultPath(p), p).to.equal(true);
         const again = await d.sync();
-        expect(again.prep.plan.actions.filter((a) => a.kind !== "adopt" && a.kind !== "adoptFolder"), `device ${i} not settled\n${ctx()}`).to.deep.equal([]);
+        expect(
+          again.prep.plan.actions.filter((a) => a.kind !== "adopt" && a.kind !== "adoptFolder"),
+          `device ${i} not settled\n${ctx()}`
+        ).to.deep.equal([]);
       }
 
       // 1. no data loss

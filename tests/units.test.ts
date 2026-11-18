@@ -2,7 +2,7 @@ import { expect } from "chai";
 import { multipartBody, qEscape } from "../src/gdrive/driveApi";
 import { isRetryable, withRetry, type HttpResponse } from "../src/gdrive/http";
 import { AuthError, exchangeCode, pkceChallenge, startAuth, TokenManager, type Tokens } from "../src/gdrive/oauth";
-import { parseFolderId } from "../src/settings";
+import { DEFAULT_SETTINGS, parseFolderId, sanitizeSettings } from "../src/settings";
 import { DEFAULT_IGNORE_PATTERNS, IgnoreFilter } from "../src/sync/ignore";
 import { normKey } from "../src/sync/paths";
 import { reviewReason } from "../src/sync/planView";
@@ -142,9 +142,17 @@ describe("OAuth", () => {
       err = e;
     }
     expect(String(err)).to.match(/tick the Google Drive checkbox/);
-    const ok = await exchangeCode(async () => res(200, { access_token: "a", expires_in: 3600, refresh_token: "r", scope: "https://www.googleapis.com/auth/drive" }), {
-      clientId: "c", clientSecret: "s", redirectUri: "u", code: "x", verifier: "v", requiredScope: "drive",
-    });
+    const ok = await exchangeCode(
+      async () => res(200, { access_token: "a", expires_in: 3600, refresh_token: "r", scope: "https://www.googleapis.com/auth/drive" }),
+      {
+        clientId: "c",
+        clientSecret: "s",
+        redirectUri: "u",
+        code: "x",
+        verifier: "v",
+        requiredScope: "drive",
+      }
+    );
     expect(ok.refreshToken).to.equal("r");
   });
   it("records when a time-limited refresh token expires, and no expiry otherwise", async () => {
@@ -158,7 +166,11 @@ describe("OAuth", () => {
   });
   it("keeps the original sign-in date across access-token refreshes", async () => {
     let tokens: Tokens = { accessToken: "", expiresAt: 0, refreshToken: "rt", scope: "", issuedAt: 1234 };
-    const tm = new TokenManager(async () => res(200, { access_token: "n", expires_in: 3600 }), () => ({ clientId: "c", clientSecret: "s", tokens }), async (t) => void (tokens = t));
+    const tm = new TokenManager(
+      async () => res(200, { access_token: "n", expires_in: 3600 }),
+      () => ({ clientId: "c", clientSecret: "s", tokens }),
+      async (t) => void (tokens = t)
+    );
     await tm.accessToken();
     expect(tokens.issuedAt).to.equal(1234);
     expect(tokens.refreshTokenExpiresAt).to.equal(undefined);
@@ -213,12 +225,50 @@ describe("multipart upload body", () => {
 });
 
 describe("review rules", () => {
-  const trash = (n: number): Action[] => Array.from({ length: n }, (_, i) => ({ kind: "trashLocal", path: `${i}`, local: { path: `${i}`, mtime: 1, size: 1 } }));
+  const trash = (n: number): Action[] =>
+    Array.from({ length: n }, (_, i) => ({ kind: "trashLocal", path: `${i}`, local: { path: `${i}`, mtime: 1, size: 1 } }));
   it("first sync and dry runs always need review; many deletions need review", () => {
     expect(reviewReason({ firstSync: true, actions: [] }, false, 20)).to.equal("first-sync");
     expect(reviewReason({ firstSync: false, actions: [] }, true, 20)).to.equal("dry-run");
     expect(reviewReason({ firstSync: false, actions: trash(20) }, false, 20)).to.equal(null);
     expect(reviewReason({ firstSync: false, actions: trash(21) }, false, 20)).to.equal("many-deletions");
     expect(reviewReason({ firstSync: false, actions: trash(1) }, false, 0)).to.equal("many-deletions");
+  });
+});
+
+describe("settings sanitizer (corrupted or old data.json)", () => {
+  it("returns defaults for missing or garbage data", () => {
+    expect(sanitizeSettings(null)).to.deep.equal(DEFAULT_SETTINGS);
+    expect(sanitizeSettings("nonsense")).to.deep.equal(DEFAULT_SETTINGS);
+  });
+  it("keeps valid values, drops wrong types, clamps numbers", () => {
+    const s = sanitizeSettings({
+      clientId: "cid",
+      scope: "drive.file",
+      intervalMinutes: -5,
+      syncAfterEditSeconds: "60",
+      maxFileSizeMB: 1e12,
+      syncOnLeave: false,
+      deleteConfirmThreshold: Number.NaN,
+      redirectUri: "",
+      unknownKey: 1,
+      tokens: { refreshToken: "rt", accessToken: 5, expiresAt: 1 },
+    });
+    expect(s.clientId).to.equal("cid");
+    expect(s.scope).to.equal("drive.file");
+    expect(s.intervalMinutes).to.equal(0);
+    expect(s.syncAfterEditSeconds).to.equal(DEFAULT_SETTINGS.syncAfterEditSeconds);
+    expect(s.maxFileSizeMB).to.equal(100_000);
+    expect(s.syncOnLeave).to.equal(false);
+    expect(s.deleteConfirmThreshold).to.equal(DEFAULT_SETTINGS.deleteConfirmThreshold);
+    expect(s.redirectUri).to.equal(DEFAULT_SETTINGS.redirectUri);
+    expect(s).to.not.have.property("unknownKey");
+    expect(s.tokens).to.deep.equal({ refreshToken: "rt", accessToken: "", expiresAt: 1, scope: "" });
+  });
+  it("rejects an invalid scope and tokens without a refresh token", () => {
+    const s = sanitizeSettings({ scope: "admin", tokens: { accessToken: "a" }, pendingAuth: { verifier: 1 } });
+    expect(s.scope).to.equal("drive");
+    expect(s.tokens).to.equal(null);
+    expect(s.pendingAuth).to.equal(null);
   });
 });

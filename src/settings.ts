@@ -72,3 +72,50 @@ export function parseFolderId(input: string): string {
   const m = /\/folders\/([A-Za-z0-9_-]+)/.exec(s) ?? /[?&]id=([A-Za-z0-9_-]+)/.exec(s);
   return m ? m[1] : s;
 }
+
+/**
+ * Merge saved plugin data over the defaults, keeping only values of the right
+ * type. A corrupted or hand-edited data.json falls back to safe defaults
+ * instead of breaking sync.
+ */
+export function sanitizeSettings(saved: unknown): GDriveSettings {
+  const out: GDriveSettings = { ...DEFAULT_SETTINGS };
+  if (!saved || typeof saved !== "object") return out;
+  const s = saved as Record<string, unknown>;
+  const str = (k: keyof GDriveSettings) => {
+    if (typeof s[k] === "string") (out as unknown as Record<string, unknown>)[k] = s[k];
+  };
+  const bool = (k: keyof GDriveSettings) => {
+    if (typeof s[k] === "boolean") (out as unknown as Record<string, unknown>)[k] = s[k];
+  };
+  const num = (k: keyof GDriveSettings, min: number, max: number) => {
+    const v = s[k];
+    if (typeof v === "number" && Number.isFinite(v)) (out as unknown as Record<string, unknown>)[k] = Math.min(max, Math.max(min, v));
+  };
+  for (const k of ["clientId", "clientSecret", "redirectUri", "accountEmail", "folderId", "folderName", "ignorePatterns", "installId"] as const) str(k);
+  for (const k of ["syncOnStartup", "syncOnResume", "syncOnLeave", "syncConfigDir"] as const) bool(k);
+  num("intervalMinutes", 0, 24 * 60);
+  num("syncAfterEditSeconds", 0, 24 * 3600);
+  num("maxFileSizeMB", 0, 100_000);
+  num("deleteConfirmThreshold", 0, 1_000_000);
+  num("lastSyncAt", 0, Number.MAX_SAFE_INTEGER);
+  if (s.scope === "drive" || s.scope === "drive.file") out.scope = s.scope;
+  if (!out.redirectUri) out.redirectUri = DEFAULT_REDIRECT_URI;
+
+  const t = s.tokens as Record<string, unknown> | null | undefined;
+  if (t && typeof t === "object" && typeof t.refreshToken === "string" && t.refreshToken !== "") {
+    out.tokens = {
+      refreshToken: t.refreshToken,
+      accessToken: typeof t.accessToken === "string" ? t.accessToken : "",
+      expiresAt: typeof t.expiresAt === "number" ? t.expiresAt : 0,
+      scope: typeof t.scope === "string" ? t.scope : "",
+      ...(typeof t.issuedAt === "number" ? { issuedAt: t.issuedAt } : {}),
+      ...(typeof t.refreshTokenExpiresAt === "number" ? { refreshTokenExpiresAt: t.refreshTokenExpiresAt } : {}),
+    };
+  }
+  const pa = s.pendingAuth as Record<string, unknown> | null | undefined;
+  if (pa && typeof pa === "object" && typeof pa.verifier === "string" && typeof pa.state === "string" && typeof pa.createdAt === "number") {
+    out.pendingAuth = { verifier: pa.verifier, state: pa.state, createdAt: pa.createdAt };
+  }
+  return out;
+}

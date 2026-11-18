@@ -22,8 +22,19 @@ export class ObsidianLocalFs implements LocalFs {
     return this.app.vault.adapter;
   }
 
+  /** Real on-disk path for a normalised key (they differ only for NFD names, e.g. created on iOS). */
   private r(p: string): string {
-    return this.real.get(p) ?? p;
+    const known = this.real.get(p);
+    if (known) return known;
+    if (p !== p.normalize("NFD") && !this.app.vault.getAbstractFileByPath(p)) {
+      // Not scanned in this instance (e.g. the conflict view): look it up once.
+      const hit = this.app.vault.getAllLoadedFiles().find((f) => normKey(f.path) === p);
+      if (hit) {
+        this.real.set(p, hit.path);
+        return hit.path;
+      }
+    }
+    return p;
   }
 
   async scan(opts: { syncConfigDir: boolean; skipFolder: (path: string) => boolean }): Promise<LocalSnapshot> {
