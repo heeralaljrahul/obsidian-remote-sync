@@ -18,6 +18,8 @@ It's a personal plugin: it isn't in Obsidian's community plugin store, and you i
 - **Not:** Obsidian's official [Obsidian Sync](https://obsidian.md/sync) service, nor affiliated with Google or Obsidian.
 - **Where your data goes:** only between your devices and **your** Google Drive. Notes, tokens and keys are never sent to any other server (not even the author's).
 - **Platforms:** Obsidian desktop (Windows, macOS, Linux) and Obsidian mobile on iOS/iPadOS. It uses no desktop-only (Node/Electron) code; Android should work but isn't tested.
+- **iPhone/iPad versions:** any iOS/iPadOS version the current Obsidian app runs on. The plugin only uses web features available since iOS 15, so current releases (iOS 18, 26 and 27, as of November 2026) are all fine. Keep the Obsidian app itself up to date from the App Store.
+- **Obsidian version:** 1.4.11 or newer (`minAppVersion` in `manifest.json`).
 
 > ⚠️ **Back up first.** Copy your notes somewhere safe before the first sync (Part 1 of the guide).
 >
