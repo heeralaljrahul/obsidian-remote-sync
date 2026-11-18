@@ -5,6 +5,9 @@ on:
     branches: ["**"]
     tags-ignore: ["**"]
   pull_request:
+  schedule:
+    - cron: "17 3 * * 1" # weekly deep fuzz run
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -19,6 +22,24 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      # Chromium for the end-to-end tests of the built main.js and the callback page
+      - run: npx playwright install --with-deps chromium
+      # Unit, integration, security, network, stress, fuzz (150 scenarios), e2e, live Google probes
       - run: npm test
-      # build = typecheck + bundle + check that main.js has no Node/Electron imports
+      # Typecheck + bundle + check that main.js has no Node/Electron/eval/innerHTML
       - run: npm run build
+      - name: Runtime dependency audit
+        run: npm audit --omit=dev --audit-level=moderate
+
+  deep-fuzz:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      # ~100,000 randomized multi-device syncs with network failures and interruptions
+      - run: npm run test:fuzz

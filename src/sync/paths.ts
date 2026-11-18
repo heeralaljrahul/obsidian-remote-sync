@@ -44,3 +44,34 @@ export function ancestors(p: string): string[] {
 export function depth(p: string): number {
   return p === "" ? 0 : p.split("/").length;
 }
+
+/**
+ * Why a single file/folder NAME (from Drive) can't be used locally, or null if fine.
+ * Blocks path tricks (`..`, `\`), control characters, and the characters Obsidian
+ * itself refuses in file names on Windows/iOS: \ / : * ? " < > |
+ */
+export function unsafeNameReason(name: string): string | null {
+  if (name === "" || name.trim() === "") return "empty name";
+  if (name === "." || name === "..") return `name "${name}" is not allowed`;
+  // eslint-disable-next-line no-control-regex
+  if (/[\u0000-\u001f\u007f]/.test(name)) return "name contains control characters";
+  if (/[\\/:*?"<>|]/.test(name)) return 'name contains a character Obsidian doesn\'t allow (\\ / : * ? " < > |)';
+  return null;
+}
+
+/** A path is safe if it is vault-relative and every segment is a safe name. Defence in depth before any local write. */
+export function isSafeVaultPath(p: string): boolean {
+  if (p === "" || p.startsWith("/") || p.endsWith("/")) return false;
+  return p.split("/").every((seg) => unsafeNameReason(seg) === null);
+}
+
+export class UnsafePathError extends Error {
+  constructor(p: string) {
+    super(`refusing to touch unsafe path ${JSON.stringify(p)}`);
+    this.name = "UnsafePathError";
+  }
+}
+
+export function assertSafeVaultPath(p: string): void {
+  if (!isSafeVaultPath(p)) throw new UnsafePathError(p);
+}

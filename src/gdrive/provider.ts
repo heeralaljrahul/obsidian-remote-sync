@@ -103,6 +103,10 @@ export class GoogleDriveProvider implements RemoteProvider {
     for (const [p, fid] of this.folderIds) if (fid === id) this.folderIds.delete(p);
   }
 
+  flush(): Promise<void> {
+    return this.index.flush();
+  }
+
   async folderIsEmpty(id: string): Promise<boolean> {
     const children = await this.api.list(`'${id.replace(/'/g, "\\'")}' in parents and trashed = false`, "id");
     return children.length === 0;

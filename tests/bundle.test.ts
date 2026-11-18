@@ -21,7 +21,7 @@ describe("bundle check (no Node/Electron in main.js)", () => {
     expect(check('var o=require("obsidian");module.exports=o;').ok).to.equal(true);
   });
   it("rejects require('fs'), Buffer and electron", () => {
-    for (const bad of ['require("fs")', 'require("path")', "Buffer.from('x')", 'require("electron")', "require(name)"]) {
+    for (const bad of ['require("fs")', 'require("path")', "Buffer.from('x')", 'require("electron")', "require(name)", "eval('1')", "new Function('return 1')", "el.innerHTML = s", "el.insertAdjacentHTML('x', s)"]) {
       const r = check(`var o=require("obsidian");${bad};`);
       expect(r.ok, bad).to.equal(false);
     }

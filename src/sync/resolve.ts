@@ -12,7 +12,7 @@
  * at the diff; if one did, nothing happens and the user is asked to re-check.
  */
 import type { SyncLog } from "../log";
-import { baseName, joinPath, parentOf } from "./paths";
+import { assertSafeVaultPath, baseName, joinPath, parentOf } from "./paths";
 import type { BaseStore } from "./store";
 import { PreconditionError, type LocalFile, type LocalFs, type RemoteFile, type RemoteProvider } from "./types";
 
@@ -63,10 +63,14 @@ async function expectLocalUnchanged(local: LocalFs, c: ConflictItem): Promise<vo
 export async function resolveConflict(c: ConflictItem, choice: Resolution, deps: ResolveDeps): Promise<string> {
   const { local, remote, base, md5, log } = deps;
   const now = deps.now ?? Date.now;
+  assertSafeVaultPath(c.path);
   await expectLocalUnchanged(local, c);
 
-  const putBase = async (path: string, hash: string, rf: RemoteFile) => {
-    const st = await local.stat(path);
+  const putBase = async (path: string, hash: string, rf: RemoteFile, knownLocal?: { mtime: number; size: number }, expectSize?: number) => {
+    const st = knownLocal ?? (await local.stat(path));
+    if (!knownLocal && expectSize !== undefined && st?.size !== expectSize) {
+      throw new PreconditionError("the file changed again right after it was written — run a sync to re-check");
+    }
     await base.put({
       path,
       isFolder: false,
@@ -97,7 +101,8 @@ export async function resolveConflict(c: ConflictItem, choice: Resolution, deps:
     const fresh = await remote.stat(c.remote.id);
     if (fresh && fresh.md5 !== c.remote.md5) throw new PreconditionError("the Drive version changed after you opened it — close and review again");
     const rf = await remote.upload(c.path, data, fresh ? c.remote.id : undefined, hash);
-    await putBase(c.path, hash, rf);
+    // Use the stats we verified before reading, not a fresh stat (an edit in between must stay visible).
+    await putBase(c.path, hash, rf, { mtime: c.local.mtime, size: c.local.size });
     log.info(`conflict ${c.path}: kept this device's version (previous Drive version is in Drive's version history)`);
     return "Kept this device's version. The previous Drive version is still in Drive's version history.";
   }
@@ -106,7 +111,7 @@ export async function resolveConflict(c: ConflictItem, choice: Resolution, deps:
     const { data, hash } = await downloadRemote();
     await local.trash(c.path);
     await local.write(c.path, data, c.remote.modifiedTime);
-    await putBase(c.path, hash, c.remote);
+    await putBase(c.path, hash, c.remote, undefined, data.byteLength);
     log.info(`conflict ${c.path}: kept the Drive version (this device's version moved to .trash)`);
     return "Kept the Drive version. This device's version was moved to the vault's .trash folder.";
   }
@@ -114,15 +119,17 @@ export async function resolveConflict(c: ConflictItem, choice: Resolution, deps:
   // keep-both
   const { data, hash } = await downloadRemote();
   const copy = await conflictCopyPath(c.path, new Date(now()), async (p) => (await local.stat(p)) !== null);
+  assertSafeVaultPath(copy);
   await local.rename(c.path, copy);
   await local.write(c.path, data, c.remote.modifiedTime);
-  await putBase(c.path, hash, c.remote);
+  await putBase(c.path, hash, c.remote, undefined, data.byteLength);
   log.info(`conflict ${c.path}: kept both; this device's version saved as ${copy}`);
   try {
     const copyData = await local.read(copy);
     const copyHash = md5(copyData);
+    const copySt = await local.stat(copy);
     const rf = await remote.upload(copy, copyData, undefined, copyHash);
-    await putBase(copy, copyHash, rf);
+    await putBase(copy, copyHash, rf, copySt && copySt.size === copyData.byteLength ? { mtime: copySt.mtime, size: copySt.size } : undefined, copyData.byteLength);
   } catch (e) {
     // Not a problem: the next sync uploads it as a new file.
     log.warn(`conflict copy ${copy} will be uploaded on the next sync (${e instanceof Error ? e.message : e})`);

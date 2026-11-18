@@ -58,6 +58,8 @@ export interface RetryOptions {
   sleep?: (ms: number) => Promise<void>;
   random?: () => number;
   onRetry?: (attempt: number, delayMs: number, why: string) => void;
+  /** Stop retrying immediately when this returns true (e.g. the device went offline). */
+  giveUp?: () => boolean;
 }
 
 export const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
@@ -97,7 +99,7 @@ export function withRetry(http: HttpFn, opts: RetryOptions = {}): HttpFn {
       const retry = isNonIdempotent(req)
         ? res !== undefined && isRateLimited(res)
         : netErr !== undefined || (res !== undefined && isRetryable(res));
-      if (!retry || attempt >= maxRetries) {
+      if (!retry || attempt >= maxRetries || opts.giveUp?.()) {
         if (netErr !== undefined) throw netErr;
         return res!;
       }

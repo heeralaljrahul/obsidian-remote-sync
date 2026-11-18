@@ -14,6 +14,18 @@ for (const g of ["process.versions", "__dirname", "__filename", "Buffer.from", "
   if (src.includes(g)) problems.push(g);
 }
 
+// No dynamic code execution and no raw HTML injection (XSS) in the plugin.
+for (const [re, label] of [
+  [/\beval\(/, "eval("],
+  [/\bnew Function\(/, "new Function("],
+  [/\.innerHTML\s*=/, "innerHTML assignment"],
+  [/\.outerHTML\s*=/, "outerHTML assignment"],
+  [/insertAdjacentHTML\(/, "insertAdjacentHTML("],
+  [/document\.write\(/, "document.write("],
+]) {
+  if (re.test(src)) problems.push(label);
+}
+
 if (problems.length) {
   console.error("Bundle check FAILED — Node/Electron usage found in main.js:\n  " + [...new Set(problems)].join("\n  "));
   process.exit(1);

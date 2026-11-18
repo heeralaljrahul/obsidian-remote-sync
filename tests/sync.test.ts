@@ -195,6 +195,24 @@ describe("sync scenarios (mock Google Drive)", () => {
         expect(pc.vault.trashed).to.deep.equal(["notes"]);
       });
 
+      it("REGRESSION (found by fuzzing): an unsynced local edit survives a rename + edit from another device", async () => {
+        const phone = new Device(drive);
+        await phone.sync();
+        pc.vault.put("a.md", "PC edit, not synced yet");
+        phone.vault.userRename("a.md", "renamed-on-phone.md");
+        await phone.sync(); // Drive: same file, new name
+        phone.vault.put("renamed-on-phone.md", "phone edit after renaming");
+        await phone.sync(); // Drive: new content
+        // PC: follows the rename (keeping its edit) and reports the conflict.
+        const first = await pc.sync();
+        expect(kinds(first.prep)).to.include.members(["moveLocal:a.md->renamed-on-phone.md", "conflict:renamed-on-phone.md"]);
+        // The bug: the next sync treated the PC copy as unchanged and downloaded over it.
+        const second = await pc.sync();
+        expect(kinds(second.prep)).to.deep.equal(["conflict:renamed-on-phone.md"]);
+        expect(pc.vault.text("renamed-on-phone.md")).to.equal("PC edit, not synced yet");
+        expect(drive.read("renamed-on-phone.md")).to.equal("phone edit after renaming");
+      });
+
       it("renamed locally AND edited in Drive: rename is applied, edit is downloaded", async () => {
         drive.move("a.md", "a2.md");
         drive.edit("a2.md", "A-remote-edit");

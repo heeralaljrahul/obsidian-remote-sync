@@ -41,7 +41,37 @@ export interface PendingAuth {
   createdAt: number;
 }
 
+/** An unfinished browser sign-in is only accepted for this long. */
+export const PENDING_AUTH_MAX_AGE_MS = 15 * 60 * 1000;
+
+/** The redirect URI must be https (or http on localhost for testing): the code travels through it. */
+export function redirectUriProblem(uri: string): string | null {
+  let u: URL;
+  try {
+    u = new URL(uri);
+  } catch {
+    return "The redirect URI is not a valid URL.";
+  }
+  if (u.protocol === "https:") return null;
+  if (u.protocol === "http:" && (u.hostname === "localhost" || u.hostname === "127.0.0.1")) return null;
+  return "The redirect URI must start with https://";
+}
+
+/**
+ * Validate a returning sign-in before the code is exchanged. `state` is required
+ * for the browser flow (protects against a forged obsidian:// link); the manual
+ * paste-a-code fallback passes `state === undefined` and relies on PKCE alone.
+ */
+export function checkAuthCallback(pending: PendingAuth | null, state: string | undefined, now = Date.now()): string | null {
+  if (!pending) return "No sign-in in progress. Press 'Sign in with Google' again.";
+  if (now - pending.createdAt > PENDING_AUTH_MAX_AGE_MS) return "This sign-in took too long and has expired. Press 'Sign in with Google' again.";
+  if (state !== undefined && state !== pending.state) return "Sign-in rejected: the response does not match the request (state mismatch). Try again.";
+  return null;
+}
+
 export async function startAuth(clientId: string, redirectUri: string, scope: ScopeMode): Promise<{ url: string; pending: PendingAuth }> {
+  const bad = redirectUriProblem(redirectUri);
+  if (bad) throw new Error(bad);
   const verifier = randomString(48); // 64 chars, within PKCE's 43..128
   const state = randomString(16);
   const params = new URLSearchParams({

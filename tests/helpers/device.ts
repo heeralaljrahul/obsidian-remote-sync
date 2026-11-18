@@ -19,6 +19,8 @@ export class MemVault implements LocalFs {
   folders = new Set<string>();
   /** paths moved to the vault's .trash */
   trashed: string[] = [];
+  /** content of everything moved to .trash (Obsidian keeps it there) */
+  trashBin: Array<{ path: string; data: Uint8Array }> = [];
   /** test hook: runs before every write (throw to simulate a crash mid-write) */
   beforeWrite: ((path: string) => void) | null = null;
   private static clock = Date.parse("2025-06-01T00:00:00Z");
@@ -78,6 +80,8 @@ export class MemVault implements LocalFs {
   }
   async trash(p: string) {
     this.trashed.push(p);
+    const f = this.files.get(p);
+    if (f) this.trashBin.push({ path: p, data: f.data });
     this.files.delete(p);
     this.folders.delete(p);
   }

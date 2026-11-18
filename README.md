@@ -68,7 +68,15 @@ npm test
 npm run build
 ```
 
-- `npm test` type-checks and runs the test suite against an in-memory fake of the Google Drive v3 API.
+- `npm test` type-checks and runs the whole suite (≈190 tests):
+  - **unit / integration**: planner, executor, Drive client, OAuth, diff, ignore rules, against an in-memory fake of the Drive v3 REST API
+  - **security**: path traversal from Drive names, token/secret handling, OAuth state & PKCE, query injection, callback-page XSS + CSP, bundle must not contain `eval`/`innerHTML`/Node APIs
+  - **network**: 401 refresh, 429/403/5xx backoff, offline, dropped connections mid-sync, garbled/corrupted/truncated replies, expired cursors and upload sessions, plus probes against Google's real endpoints
+  - **stress**: 5,000-file vaults, 60-level folders, 40 MB files, 1,000 deletions/renames, 300 conflicts
+  - **system / fuzz**: random multi-device scenarios with interruptions and network failures, checking *no data loss* and *convergence*
+  - **end-to-end**: the built `main.js` in Chromium inside a fake Obsidian (real IndexedDB + Web Crypto): sign-in, first-sync review, conflict view, iPhone mode, sync on leave, offline
+- `npm run test:fuzz` runs the deep fuzz (3,000 scenarios ≈ 100,000 syncs); CI runs it weekly.
+- `npm run test:e2e` runs only the browser tests (needs Playwright's Chromium: `npx playwright install chromium`).
 - `npm run build` type-checks, bundles `main.js` and verifies it has no Node/Electron imports.
 
 To try a build on desktop, copy `main.js`, `manifest.json` and `styles.css` into `<vault>/.obsidian/plugins/gdrive-vault-sync/`.

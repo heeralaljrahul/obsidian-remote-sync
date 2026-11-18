@@ -15,6 +15,7 @@
  * If the world moved on, the action is skipped and re-planned next time.
  */
 import { errMsg, type SyncLog } from "../log";
+import { assertSafeVaultPath } from "./paths";
 import { isDeletion, pathOf } from "./planner";
 import type { BaseStore } from "./store";
 import { PreconditionError, type Action, type BaseEntry, type LocalFs, type RemoteFile, type RemoteProvider, type SyncPlan } from "./types";
@@ -95,6 +96,13 @@ export async function execute(plan: SyncPlan, deps: ExecutorDeps): Promise<ExecR
   };
 
   const run = async (a: Action): Promise<void> => {
+    // Defence in depth: never act on a path that could escape the vault.
+    if (a.kind === "moveLocal" || a.kind === "moveRemote") {
+      assertSafeVaultPath(a.from);
+      assertSafeVaultPath(a.to);
+    } else {
+      assertSafeVaultPath(a.path);
+    }
     switch (a.kind) {
       case "upload": {
         await expectLocal(a.path, a.local);
@@ -121,6 +129,8 @@ export async function execute(plan: SyncPlan, deps: ExecutorDeps): Promise<ExecR
         await local.write(a.path, data, a.remote.modifiedTime);
         const st = await local.stat(a.path);
         if (!st) throw new Error("file missing right after writing it");
+        // Edited again in the instant after writing? Don't record it as in sync.
+        if (st.size !== data.byteLength) throw new PreconditionError("local file changed right after download");
         await base.put({ path: a.path, isFolder: false, md5: hash, localMtime: st.mtime, localSize: st.size, ...remoteFields(a.remote), syncedAt: now() });
         return;
       }
@@ -156,19 +166,19 @@ export async function execute(plan: SyncPlan, deps: ExecutorDeps): Promise<ExecR
       case "moveLocal": {
         if (await local.stat(a.to)) throw new PreconditionError("destination already exists locally");
         await local.rename(a.from, a.to);
+        // Keep the OLD local mtime/size in the base: if the file had unsynced local
+        // edits, they must still look like edits after the rename (found by fuzzing:
+        // recording the current stats here made a later download overwrite them).
         const b = await base.get(a.from);
-        const st = await local.stat(a.to);
-        if (b && st) await base.put({ ...b, path: a.to, localMtime: st.mtime, localSize: st.size, syncedAt: now() });
+        if (b) await base.put({ ...b, path: a.to, syncedAt: now() });
         await base.delete(a.from);
         return;
       }
       case "moveRemote": {
         const rf = await remote.move(a.remoteId, a.to);
+        // Same rule as moveLocal: never refresh local stats without re-checking content.
         const b = await base.get(a.from);
-        const st = await local.stat(a.to);
-        if (b) {
-          await base.put({ ...b, path: a.to, ...remoteFields(rf), localMtime: st?.mtime ?? b.localMtime, localSize: st?.size ?? b.localSize, syncedAt: now() });
-        }
+        if (b) await base.put({ ...b, path: a.to, ...remoteFields(rf), syncedAt: now() });
         await base.delete(a.from);
         return;
       }

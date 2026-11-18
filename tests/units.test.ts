@@ -98,6 +98,12 @@ describe("HTTP retry", () => {
     expect((await http({ url: "https://www.googleapis.com/drive/v3/files", method: "POST" })).status).to.equal(200);
     expect(calls).to.equal(2);
   });
+  it("stops retrying at once when the device goes offline", async () => {
+    let calls = 0;
+    const http = withRetry(async () => (calls++, res(503)), { sleep: async () => {}, giveUp: () => calls >= 2 });
+    expect((await http({ url: "x" })).status).to.equal(503);
+    expect(calls).to.equal(2);
+  });
   it("retries network errors", async () => {
     let calls = 0;
     const http = withRetry(

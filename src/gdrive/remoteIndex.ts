@@ -16,7 +16,7 @@
  *   - otherwise the path is BLOCKED: never downloaded, uploaded or deleted
  *     until you clean up the duplicates in Drive.
  */
-import { foldKey, joinPath, normKey } from "../sync/paths";
+import { foldKey, joinPath, normKey, unsafeNameReason } from "../sync/paths";
 import type { KVStore, RemoteFile, RemoteSnapshot } from "../sync/types";
 import { FOLDER_MIME, isGoogleNative, type DriveApi, type DriveFile } from "./driveApi";
 
@@ -163,19 +163,38 @@ export class RemoteIndex {
   }
 
   private save(): Promise<void> {
+    this.unsaved = 0;
     return this.kv.set(this.key, this.state);
   }
 
-  /** Record the result of our own upload/move/mkdir right away (the Changes API will echo it later; applying twice is harmless). */
+  private unsaved = 0;
+
+  /**
+   * Record the result of our own upload/move/mkdir in memory. Saved in batches
+   * (every 200 changes and at the end of a sync), not per file: rewriting the
+   * whole index after every file made big syncs quadratic. Losing unsaved
+   * entries is harmless: the saved cursor predates them, so the Changes API
+   * replays them on the next sync.
+   */
   async upsert(f: DriveFile, parentId: string): Promise<void> {
     if (!this.state) return;
     this.state.items[f.id] = toItem(f, parentId);
-    await this.save();
+    await this.noteChange();
   }
 
   async remove(id: string): Promise<void> {
     if (!this.state?.items[id]) return;
     delete this.state.items[id];
+    await this.noteChange();
+  }
+
+  private async noteChange(): Promise<void> {
+    if (++this.unsaved >= 200) await this.flush();
+  }
+
+  async flush(): Promise<void> {
+    if (!this.state || this.unsaved === 0) return;
+    this.unsaved = 0;
     await this.save();
   }
 
@@ -205,8 +224,9 @@ export class RemoteIndex {
       const children = folderIds.flatMap((id) => byParent.get(id) ?? []);
       const groups = new Map<string, IndexItem[]>();
       for (const c of children) {
-        if (c.name.includes("/") || c.name === "." || c.name === "..") {
-          notes.push(`skipping Drive item with an invalid name: "${c.name}" in "${path || "/"}"`);
+        const bad = unsafeNameReason(c.name);
+        if (bad) {
+          notes.push(`skipping Drive item ${JSON.stringify(c.name)} in "${path || "/"}": ${bad}`);
           continue;
         }
         if (c.native) {

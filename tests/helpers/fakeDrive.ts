@@ -57,6 +57,8 @@ export class FakeDrive {
   private clock = Date.parse("2025-01-01T00:00:00Z");
   private changeLog: Array<{ seq: number; fileId: string }> = [];
   private sessions = new Map<string, Session>();
+  /** Every content a file ever had (like Drive's version history), by file ID. */
+  revisions = new Map<string, Uint8Array[]>();
   /** pagination size for files.list (small in tests to exercise paging) */
   pageSize = 1000;
   /** every request, for assertions */
@@ -77,6 +79,11 @@ export class FakeDrive {
 
   private newId(): string {
     return `id${++this.seq}`;
+  }
+
+  private keepRevision(id: string, content: Uint8Array | undefined) {
+    if (!content) return;
+    this.revisions.set(id, [...(this.revisions.get(id) ?? []), content]);
   }
 
   private touch(id: string) {
@@ -109,7 +116,9 @@ export class FakeDrive {
     const parent = this.mkdirp(i < 0 ? "" : path.slice(0, i));
     const id = this.newId();
     const t = this.tick();
-    this.files.set(id, { id, name: path.slice(i + 1), mimeType, parents: [parent], content: typeof content === "string" ? enc.encode(content) : content, modifiedTime: t, createdTime: t, trashed: false });
+    const bytes = typeof content === "string" ? enc.encode(content) : content;
+    this.files.set(id, { id, name: path.slice(i + 1), mimeType, parents: [parent], content: bytes, modifiedTime: t, createdTime: t, trashed: false });
+    this.keepRevision(id, bytes);
     this.touch(id);
     return id;
   }
@@ -166,6 +175,7 @@ export class FakeDrive {
   edit(path: string, content: string) {
     const f = this.files.get(this.idAt(path))!;
     f.content = enc.encode(content);
+    this.keepRevision(f.id, f.content);
     f.modifiedTime = this.tick();
     this.touch(f.id);
   }
@@ -184,6 +194,14 @@ export class FakeDrive {
     f.name = to.slice(i + 1);
     f.modifiedTime = this.tick();
     this.touch(f.id);
+  }
+
+  /** Every piece of content Drive still has anywhere (live, trashed, or in version history). */
+  allContentEver(): Set<string> {
+    const out = new Set<string>();
+    for (const revs of this.revisions.values()) for (const r of revs) out.add(dec.decode(r));
+    for (const f of this.files.values()) if (f.content) out.add(dec.decode(f.content));
+    return out;
   }
 
   trashedNames(): string[] {
@@ -222,6 +240,7 @@ export class FakeDrive {
     if (existingId) {
       const f = this.files.get(existingId)!;
       f.content = content;
+      this.keepRevision(f.id, content);
       f.modifiedTime = this.tick();
       this.touch(f.id);
       return f;
@@ -230,6 +249,7 @@ export class FakeDrive {
     const t = this.tick();
     const f: FakeFile = { id, name: meta.name!, mimeType: meta.mimeType ?? "application/octet-stream", parents: meta.parents ?? [ROOT_ID], content, modifiedTime: t, createdTime: t, trashed: false };
     this.files.set(id, f);
+    this.keepRevision(id, content);
     this.touch(id);
     return f;
   }

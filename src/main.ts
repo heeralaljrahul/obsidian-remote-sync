@@ -1,7 +1,7 @@
 import { Notice, Platform, Plugin, setIcon, type ObsidianProtocolData } from "obsidian";
 import { DriveApi, FOLDER_MIME, type DriveFile } from "./gdrive/driveApi";
 import { withRetry, type HttpFn } from "./gdrive/http";
-import { AuthError, exchangeCode, REVOKE_ENDPOINT, startAuth, TokenManager, type Tokens } from "./gdrive/oauth";
+import { AuthError, checkAuthCallback, exchangeCode, REVOKE_ENDPOINT, startAuth, TokenManager, type Tokens } from "./gdrive/oauth";
 import { GoogleDriveProvider } from "./gdrive/provider";
 import { errMsg, SyncLog } from "./log";
 import { LocalForageKV } from "./obsidian/kv";
@@ -53,6 +53,8 @@ export default class GDriveSyncPlugin extends Plugin {
 
     this.http = withRetry(obsidianHttp, {
       onRetry: (n, ms, why) => this.log.warn(`Google API busy (${why}); retry ${n} in ${Math.round(ms / 1000)}s`),
+      // No point backing off for a minute when the device is simply offline.
+      giveUp: () => navigator.onLine === false,
     });
     this.tokens = new TokenManager(
       this.http,
@@ -157,7 +159,14 @@ export default class GDriveSyncPlugin extends Plugin {
       new Notice("Enter your OAuth client ID and client secret first.");
       return;
     }
-    const { url, pending } = await startAuth(s.clientId, s.redirectUri, s.scope);
+    let started: Awaited<ReturnType<typeof startAuth>>;
+    try {
+      started = await startAuth(s.clientId, s.redirectUri, s.scope);
+    } catch (e) {
+      new Notice(errMsg(e), 10000);
+      return;
+    }
+    const { url, pending } = started;
     s.pendingAuth = pending;
     await this.saveSettings(); // before leaving the app: iOS may suspend Obsidian while Safari is open
     window.open(url);
@@ -172,18 +181,16 @@ export default class GDriveSyncPlugin extends Plugin {
       new Notice("Sign-in link had no code.");
       return;
     }
-    await this.finishSignIn(p.code, p.state);
+    // The browser flow must carry the state we generated; a link without it is rejected.
+    await this.finishSignIn(p.code, p.state ?? "");
   }
 
   /** Exchange an authorization code. `state` is checked when present (the paste-code fallback has none). */
   async finishSignIn(code: string, state?: string) {
     const pending = this.settings.pendingAuth;
-    if (!pending) {
-      new Notice("No sign-in in progress. Press 'Sign in with Google' again.");
-      return;
-    }
-    if (state !== undefined && state !== pending.state) {
-      new Notice("Sign-in rejected: the response does not match the request (state mismatch). Try again.", 10000);
+    const problem = checkAuthCallback(pending, state);
+    if (problem || !pending) {
+      new Notice(problem ?? "No sign-in in progress.", 10000);
       return;
     }
     try {
@@ -313,8 +320,9 @@ export default class GDriveSyncPlugin extends Plugin {
       if (manual) new Notice("Google Drive sync is not set up yet: open the plugin settings.");
       return;
     }
-    if (!manual && navigator.onLine === false) {
+    if (navigator.onLine === false) {
       this.log.info(`${trigger} sync skipped: offline`);
+      if (manual) new Notice("You're offline. Google Drive sync will run when you're back online.");
       return;
     }
     this.warnIfSignInExpiring();

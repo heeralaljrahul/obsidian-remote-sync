@@ -2,6 +2,7 @@ import SparkMD5 from "spark-md5";
 import type { SyncLog } from "../log";
 import { execute, type ExecResult } from "./executor";
 import type { IgnoreFilter } from "./ignore";
+import { isSafeVaultPath } from "./paths";
 import { pathsNeedingHash, plan, summarize } from "./planner";
 import { BaseStore } from "./store";
 import type { BaseEntry, KVStore, LocalFs, LocalSnapshot, PlanOptions, RemoteProvider, RemoteSnapshot, SyncPlan } from "./types";
@@ -34,8 +35,8 @@ export interface Prepared {
 
 function filterLocal(s: LocalSnapshot, f: IgnoreFilter): LocalSnapshot {
   return {
-    files: new Map([...s.files].filter(([p]) => !f.isIgnored(p, false))),
-    folders: new Set([...s.folders].filter((p) => !f.isIgnored(p, true))),
+    files: new Map([...s.files].filter(([p]) => !f.isIgnored(p, false) && isSafeVaultPath(p))),
+    folders: new Set([...s.folders].filter((p) => !f.isIgnored(p, true) && isSafeVaultPath(p))),
   };
 }
 
@@ -90,6 +91,14 @@ export function safetyCheck(prep: Prepared): void {
 }
 
 export async function runPlan(deps: EngineDeps, p: SyncPlan): Promise<ExecResult> {
+  try {
+    return await executePlan(deps, p);
+  } finally {
+    await deps.remote.flush?.();
+  }
+}
+
+function executePlan(deps: EngineDeps, p: SyncPlan): Promise<ExecResult> {
   return execute(p, {
     local: deps.local,
     remote: deps.remote,

@@ -139,6 +139,8 @@ export interface RemoteProvider {
   trash(id: string): Promise<void>;
   /** Are there any (non-trashed) children left? */
   folderIsEmpty(id: string): Promise<boolean>;
+  /** Persist any cached state (called at the end of a sync). */
+  flush?(): Promise<void>;
 }
 
 /** Thrown when the world changed between planning and executing an action. The action is skipped and retried next sync. */
