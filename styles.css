@@ -1,72 +1,22 @@
-/* set the styles */
-
-.password-second-confirm {
-  font-weight: bold;
+.gdvs-callout {
+  border-left: 3px solid var(--interactive-accent);
+  padding: 6px 12px;
+  background: var(--background-secondary);
+  border-radius: var(--radius-s);
 }
 
-.password-disclaimer {
-  font-weight: bold;
+.gdvs-ignore {
+  width: 100%;
+  font-family: var(--font-monospace);
+  font-size: var(--font-ui-smaller);
 }
 
-.settings-auth-related {
-  border-top: 1px solid var(--background-modifier-border);
-  padding-top: 18px;
+.gdvs-spinning svg {
+  animation: gdvs-spin 1.2s linear infinite;
 }
 
-.s3-disclaimer {
-  font-weight: bold;
-}
-.s3-hide {
-  display: none;
-}
-
-.dropbox-disclaimer {
-  font-weight: bold;
-}
-.dropbox-hide {
-  display: none;
-}
-
-.dropbox-auth-button-hide {
-  display: none;
-}
-
-.dropbox-revoke-auth-button-hide {
-  display: none;
-}
-
-.onedrive-disclaimer {
-  font-weight: bold;
-}
-.onedrive-hide {
-  display: none;
-}
-
-.onedrive-auth-button-hide {
-  display: none;
-}
-
-.onedrive-revoke-auth-button-hide {
-  display: none;
-}
-
-.webdav-disclaimer {
-  font-weight: bold;
-}
-.webdav-hide {
-  display: none;
-}
-
-.qrcode-img {
-  width: 350px;
-  height: 350px;
-}
-
-/* !important isn't great practice but it needs to overwrite other css classes */
-.remotely-sync-hidden {
-  display: none !important; 
-}
-
-.remotely-sync-show-status-bar {
-  display: flex !important;
+@keyframes gdvs-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }

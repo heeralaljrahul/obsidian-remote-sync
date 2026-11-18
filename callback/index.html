@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<title>Back to Obsidian</title>
+<style>
+  :root { color-scheme: light dark; --bg:#fafafa; --fg:#1f1f1f; --muted:#666; --accent:#7c3aed; --box:#eee; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#1e1e1e; --fg:#ddd; --muted:#999; --accent:#a78bfa; --box:#2b2b2b; } }
+  body { margin:0; background:var(--bg); color:var(--fg); font:16px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
+  main { max-width:32rem; margin:0 auto; padding:2rem 1rem; }
+  a.btn { display:inline-block; background:var(--accent); color:#fff; padding:.75rem 1.25rem; border-radius:.5rem; text-decoration:none; font-weight:600; }
+  code { display:block; word-break:break-all; background:var(--box); padding:.75rem; border-radius:.5rem; font-size:.85rem; }
+  p.small { color:var(--muted); font-size:.9rem; }
+</style>
+</head>
+<body>
+<main>
+  <h1 id="title">Returning to Obsidian…</h1>
+  <p id="msg">If nothing happens, tap the button.</p>
+  <p><a class="btn" id="open" href="#">Open Obsidian</a></p>
+  <div id="fallback" hidden>
+    <p class="small">Still stuck? Copy this code into the plugin's <b>Paste authorization code</b> setting on the same device:</p>
+    <code id="code"></code>
+  </div>
+  <p class="small">This page runs entirely in your browser. It does not store or send your code anywhere except to Obsidian on this device.</p>
+</main>
+<script>
+  // Google redirects here with ?code=...&state=... (or ?error=...).
+  // Forward them unchanged to the plugin's obsidian:// handler.
+  (function () {
+    var q = new URLSearchParams(window.location.search);
+    var out = new URLSearchParams();
+    ["code", "state", "error"].forEach(function (k) { if (q.get(k)) out.set(k, q.get(k)); });
+    var target = "obsidian://gdrive-sync-auth?" + out.toString();
+    document.getElementById("open").href = target;
+    if (q.get("error")) {
+      document.getElementById("title").textContent = "Sign-in was not completed";
+      document.getElementById("msg").textContent = "Google said: " + q.get("error") + ". Go back to Obsidian and try again.";
+    } else if (q.get("code")) {
+      document.getElementById("code").textContent = q.get("code");
+      document.getElementById("fallback").hidden = false;
+    } else {
+      document.getElementById("title").textContent = "Nothing to do here";
+      document.getElementById("msg").textContent = "This page is only used during Google sign-in for the Obsidian plugin.";
+      document.getElementById("open").hidden = true;
+      return;
+    }
+    // Remove the code from the address bar / history.
+    history.replaceState(null, "", window.location.pathname);
+    window.location.href = target;
+  })();
+</script>
+</body>
+</html>

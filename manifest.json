@@ -1,10 +1,10 @@
 {
-  "id": "remotely-secure",
-  "name": "Remotely Sync",
-  "version": "0.4.49",
+  "id": "gdrive-vault-sync",
+  "name": "Google Drive Vault Sync",
+  "version": "0.1.0",
   "minAppVersion": "1.4.11",
-  "description": "Security and feature updates for the remotely-save unofficial plugin allowing users to synchronize notes between local device and the cloud service. Not backwards compatible.",
-  "author": "sboesen",
-  "authorUrl": "https://github.com/sboesen",
+  "description": "Personal plugin: two-way sync between this vault and a folder in your own Google Drive. Works on desktop and iOS.",
+  "author": "heeralaljrahul",
+  "authorUrl": "https://github.com/heeralaljrahul/obsidian-remote-sync",
   "isDesktopOnly": false
 }
