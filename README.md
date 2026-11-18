@@ -2,6 +2,9 @@
 
 [![CI](https://github.com/heeralaljrahul/obsidian-remote-sync/actions/workflows/ci.yml/badge.svg)](https://github.com/heeralaljrahul/obsidian-remote-sync/actions/workflows/ci.yml)
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
+[![Website](https://img.shields.io/badge/website-guide-brightgreen.svg)](https://heeralaljrahul.github.io/obsidian-remote-sync/)
+
+🌐 **Website:** <https://heeralaljrahul.github.io/obsidian-remote-sync/>. It has the same content as this README, and is easy to read on a phone while you set things up.
 
 **An Obsidian plugin that keeps your vault in two-way sync with a folder in your own Google Drive, on Windows/Mac, iPhone and iPad.** It works with a vault folder you already have in Google Drive, uses your own free Google Cloud login (no third-party server, nothing to pay), and never deletes anything permanently.
 
