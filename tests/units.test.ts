@@ -141,6 +141,22 @@ describe("OAuth", () => {
     });
     expect(ok.refreshToken).to.equal("r");
   });
+  it("records when a time-limited refresh token expires, and no expiry otherwise", async () => {
+    const base = { access_token: "a", expires_in: 3600, refresh_token: "r", scope: "https://www.googleapis.com/auth/drive" };
+    const args = { clientId: "c", clientSecret: "s", redirectUri: "u", code: "x", verifier: "v" };
+    const limited = await exchangeCode(async () => res(200, { ...base, refresh_token_expires_in: 604799 }), args);
+    expect(Math.round((limited.refreshTokenExpiresAt! - Date.now()) / 86_400_000)).to.equal(7);
+    const forever = await exchangeCode(async () => res(200, base), args);
+    expect(forever.refreshTokenExpiresAt).to.equal(undefined);
+    expect(forever.issuedAt).to.be.closeTo(Date.now(), 1000);
+  });
+  it("keeps the original sign-in date across access-token refreshes", async () => {
+    let tokens: Tokens = { accessToken: "", expiresAt: 0, refreshToken: "rt", scope: "", issuedAt: 1234 };
+    const tm = new TokenManager(async () => res(200, { access_token: "n", expires_in: 3600 }), () => ({ clientId: "c", clientSecret: "s", tokens }), async (t) => void (tokens = t));
+    await tm.accessToken();
+    expect(tokens.issuedAt).to.equal(1234);
+    expect(tokens.refreshTokenExpiresAt).to.equal(undefined);
+  });
   it("refreshes an expired access token once, even with concurrent callers, and saves it", async () => {
     let tokens: Tokens = { accessToken: "old", expiresAt: 0, refreshToken: "rt", scope: "" };
     let calls = 0;

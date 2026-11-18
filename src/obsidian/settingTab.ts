@@ -105,9 +105,16 @@ export class GDriveSettingTab extends PluginSettingTab {
       );
 
     const signedIn = p.isSignedIn();
+    const days = p.signInExpiresInDays();
+    const since = s.tokens?.issuedAt ? ` Signed in on ${new Date(s.tokens.issuedAt).toLocaleDateString()}.` : "";
+    const signInDesc = !signedIn
+      ? "Opens Google in your browser. After you approve, the callback page sends you back to Obsidian."
+      : days !== null
+        ? `⚠️ Google says this sign-in expires in ${Math.max(0, Math.round(days))} day(s). Publish your Google Cloud app to "In production" (SETUP.md step 3), then sign out and in again to get a sign-in that doesn't expire.`
+        : `No expiry. It keeps working as long as this device syncs at least once every 6 months and you don't revoke access.${since} If it ever stops after about 7 days, your Google Cloud app is still in "Testing" (see SETUP.md step 3).`;
     new Setting(containerEl)
       .setName(signedIn ? `Signed in${s.accountEmail ? ` as ${s.accountEmail}` : ""}` : "Not signed in")
-      .setDesc(signedIn ? "" : "Opens Google in your browser. After you approve, the callback page sends you back to Obsidian.")
+      .setDesc(signInDesc)
       .addButton((b) =>
         signedIn
           ? b.setButtonText("Sign out").onClick(async () => {
@@ -229,6 +236,25 @@ export class GDriveSettingTab extends PluginSettingTab {
       .addToggle((t) =>
         t.setValue(s.syncOnResume).onChange(async (v) => {
           s.syncOnResume = v;
+          await save();
+        })
+      );
+    new Setting(containerEl)
+      .setName("Sync when leaving Obsidian")
+      .setDesc("If you edited something since the last sync, start a sync when you switch away from Obsidian. On iPhone/iPad there are only a few seconds before iOS pauses the app; anything not finished continues next time.")
+      .addToggle((t) =>
+        t.setValue(s.syncOnLeave).onChange(async (v) => {
+          s.syncOnLeave = v;
+          await save();
+        })
+      );
+    new Setting(containerEl)
+      .setName("Sync after you stop editing (seconds)")
+      .setDesc("0 = off. E.g. 60 syncs one minute after your last change, so edits reach Drive while Obsidian is still open.")
+      .addText((t) =>
+        t.setValue(String(s.syncAfterEditSeconds)).onChange(async (v) => {
+          const n = Math.floor(Number(v));
+          s.syncAfterEditSeconds = Number.isFinite(n) && n > 0 ? Math.max(10, n) : 0;
           await save();
         })
       );

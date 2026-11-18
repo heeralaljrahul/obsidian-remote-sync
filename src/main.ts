@@ -22,7 +22,7 @@ import { randomString } from "./gdrive/oauth";
 
 export const AUTH_ACTION = "gdrive-sync-auth";
 
-export type SyncTrigger = "manual" | "startup" | "resume" | "interval" | "dry-run";
+export type SyncTrigger = "manual" | "startup" | "resume" | "interval" | "dry-run" | "edit" | "leave";
 
 export default class GDriveSyncPlugin extends Plugin {
   settings!: GDriveSettings;
@@ -40,6 +40,10 @@ export default class GDriveSyncPlugin extends Plugin {
   private reviewNoticeShown = false;
   /** Conflicts persist until resolved; only notify when the set changes. */
   private lastConflictKey = "";
+  /** Time of the last local change Obsidian told us about (0 = nothing unsynced). */
+  private lastEditAt = 0;
+  private editTimer: number | null = null;
+  private expiryWarned = false;
 
   async onload() {
     await this.loadSettings();
@@ -80,14 +84,38 @@ export default class GDriveSyncPlugin extends Plugin {
       this.registerDomEvent(document, "visibilitychange", () => {
         if (document.visibilityState === "visible" && this.settings.syncOnResume && Date.now() - this.settings.lastSyncAt > 60_000) {
           void this.sync("resume");
+        } else if (document.visibilityState === "hidden" && this.settings.syncOnLeave && this.lastEditAt > 0) {
+          // iOS gives a few seconds before suspending; progress is saved per file, so an
+          // interrupted push simply continues next time.
+          void this.sync("leave");
         }
       });
+      // Track local edits (registered after layout-ready so vault loading doesn't count).
+      const onChange = () => this.noteLocalEdit();
+      this.registerEvent(this.app.vault.on("create", onChange));
+      this.registerEvent(this.app.vault.on("modify", onChange));
+      this.registerEvent(this.app.vault.on("delete", onChange));
+      this.registerEvent(this.app.vault.on("rename", onChange));
     });
     this.resetInterval();
   }
 
+  private noteLocalEdit() {
+    this.lastEditAt = Date.now();
+    const secs = this.settings.syncAfterEditSeconds;
+    if (secs <= 0) return;
+    if (this.editTimer !== null) window.clearTimeout(this.editTimer);
+    this.editTimer = window.setTimeout(() => {
+      this.editTimer = null;
+      // Busy? Try again after another quiet period instead of dropping the edit.
+      if (this.running) this.noteLocalEdit();
+      else void this.sync("edit");
+    }, secs * 1000);
+  }
+
   onunload() {
     this.stopping = true;
+    if (this.editTimer !== null) window.clearTimeout(this.editTimer);
     void this.log?.flush();
   }
 
@@ -285,6 +313,12 @@ export default class GDriveSyncPlugin extends Plugin {
       if (manual) new Notice("Google Drive sync is not set up yet: open the plugin settings.");
       return;
     }
+    if (!manual && navigator.onLine === false) {
+      this.log.info(`${trigger} sync skipped: offline`);
+      return;
+    }
+    this.warnIfSignInExpiring();
+    const startedAt = Date.now();
     this.running = true;
     let pendingConflicts: ConflictItem[] | null = null;
     this.setSpinning(true);
@@ -325,6 +359,13 @@ export default class GDriveSyncPlugin extends Plugin {
       const res = await runPlan(deps, prep.plan);
       s.lastSyncAt = Date.now();
       await this.saveSettings();
+      if (!res.stopped && res.failed.length === 0 && this.lastEditAt <= startedAt) this.lastEditAt = 0;
+
+      // Synced settings/plugins only take effect after a restart.
+      const cfg = this.app.vault.configDir + "/";
+      const failedPaths = new Set([...res.failed, ...res.skipped].map((f) => ("path" in f.action ? f.action.path : f.action.to)));
+      const cfgChanged = prep.plan.actions.some((a) => (a.kind === "download" || a.kind === "trashLocal") && a.path.startsWith(cfg) && !failedPaths.has(a.path));
+      if (cfgChanged) new Notice("Google Drive: settings or plugins were updated from another device. Restart Obsidian to apply them.", 12000);
       const msg = `Sync finished: ${res.done} change(s)` + (res.conflicts.length ? `, ${res.conflicts.length} conflict(s) left untouched` : "") + (res.skipped.length ? `, ${res.skipped.length} skipped` : "") + (res.failed.length ? `, ${res.failed.length} FAILED` : "") + (res.stopped ? " (stopped early, will resume)" : "");
       this.log.info(msg);
       const conflictKey = res.conflicts.map((c) => ("path" in c ? c.path : "")).sort().join("\n");
@@ -399,6 +440,21 @@ export default class GDriveSyncPlugin extends Plugin {
         }
       },
     }).open();
+  }
+
+  /** Days until the saved sign-in stops working, if Google announced an expiry. */
+  signInExpiresInDays(): number | null {
+    const at = this.settings.tokens?.refreshTokenExpiresAt;
+    return at ? (at - Date.now()) / 86_400_000 : null;
+  }
+
+  private warnIfSignInExpiring() {
+    const days = this.signInExpiresInDays();
+    if (days === null || this.expiryWarned) return;
+    this.expiryWarned = true;
+    const msg = `Google Drive: your sign-in expires in ${Math.max(0, Math.round(days))} day(s). Your Google Cloud app is probably still in "Testing": publish it to "In production" (SETUP.md step 3), then sign in again.`;
+    this.log.warn(msg);
+    new Notice(msg, 15000);
   }
 
   showLog() {

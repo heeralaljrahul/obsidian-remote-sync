@@ -24,6 +24,10 @@ export interface GDriveSettings {
   syncOnResume: boolean;
   /** 0 = off */
   intervalMinutes: number;
+  /** Sync this many seconds after your last edit. 0 = off. */
+  syncAfterEditSeconds: number;
+  /** When Obsidian goes to the background with unsynced edits, start a sync. */
+  syncOnLeave: boolean;
 
   syncConfigDir: boolean;
   ignorePatterns: string;
@@ -52,6 +56,8 @@ export const DEFAULT_SETTINGS: GDriveSettings = {
   syncOnStartup: true,
   syncOnResume: true,
   intervalMinutes: 0,
+  syncAfterEditSeconds: 0,
+  syncOnLeave: true,
   syncConfigDir: false,
   ignorePatterns: DEFAULT_IGNORE_PATTERNS,
   maxFileSizeMB: 200,

@@ -65,6 +65,10 @@ export interface Tokens {
   expiresAt: number;
   refreshToken: string;
   scope: string;
+  /** When Google said this refresh token will stop working (ms). Absent = no expiry announced. */
+  refreshTokenExpiresAt?: number;
+  /** When this refresh token was issued (ms). */
+  issuedAt?: number;
 }
 
 interface TokenResponse {
@@ -72,6 +76,8 @@ interface TokenResponse {
   expires_in: number;
   refresh_token?: string;
   scope?: string;
+  /** Only sent for time-limited refresh tokens. */
+  refresh_token_expires_in?: number;
   error?: string;
   error_description?: string;
 }
@@ -115,7 +121,14 @@ export async function exchangeCode(
   if (a.requiredScope && t.scope !== undefined && !t.scope.split(" ").includes(scopeUrl(a.requiredScope))) {
     throw new Error("Google Drive access was not granted. Sign in again and tick the Google Drive checkbox on Google's consent screen.");
   }
-  return { accessToken: t.access_token, expiresAt: Date.now() + t.expires_in * 1000, refreshToken: t.refresh_token, scope: t.scope ?? "" };
+  return {
+    accessToken: t.access_token,
+    expiresAt: Date.now() + t.expires_in * 1000,
+    refreshToken: t.refresh_token,
+    scope: t.scope ?? "",
+    issuedAt: Date.now(),
+    refreshTokenExpiresAt: t.refresh_token_expires_in ? Date.now() + t.refresh_token_expires_in * 1000 : undefined,
+  };
 }
 
 export async function refreshAccessToken(http: HttpFn, a: { clientId: string; clientSecret: string; refreshToken: string }): Promise<Tokens> {
@@ -131,6 +144,7 @@ export async function refreshAccessToken(http: HttpFn, a: { clientId: string; cl
     // Google normally keeps the same refresh token; take a new one if offered.
     refreshToken: t.refresh_token ?? a.refreshToken,
     scope: t.scope ?? "",
+    refreshTokenExpiresAt: t.refresh_token_expires_in ? Date.now() + t.refresh_token_expires_in * 1000 : undefined,
   };
 }
 
@@ -168,6 +182,7 @@ export class TokenManager {
     if (!clientId || !clientSecret) throw new AuthError("Enter your OAuth client ID and secret in the plugin settings.");
     try {
       const t = await refreshAccessToken(this.http, { clientId, clientSecret, refreshToken: tokens!.refreshToken });
+      t.issuedAt = tokens!.issuedAt;
       await this.saveTokens(t);
       return t.accessToken;
     } catch (e) {

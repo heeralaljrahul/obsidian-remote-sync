@@ -16,7 +16,8 @@ Two-way sync between an Obsidian vault and a folder in **your own** Google Drive
 ## Features
 
 - **Two-way sync** of your existing Drive folder (pick it by name, link or ID), between any number of devices.
-- **Sync now** ribbon icon and command; sync when Obsidian opens, when you return to it, and every N minutes (optional).
+- **Sync now** ribbon icon and command; sync when Obsidian opens, when you return to it, when you leave it with unsynced edits, optionally shortly after you stop editing, and every N minutes (optional). Automatic syncs skip quietly when offline.
+- **Sign-ins that don't expire** once your Google Cloud app is published to "In production"; the plugin warns you if Google ever attaches an expiry (e.g. an app still in "Testing").
 - **Knows which side changed**: every file is compared with what both sides looked like at the last sync (MD5, size, modified time), instead of "newest timestamp wins".
 - **Conflict view**: a note edited on two devices is never silently overwritten. You get a list of conflicts and, per file, a diff (unified on phones, side-by-side optional on desktop) with **Keep this device / Keep Drive / Keep both**. The losing version is never thrown away: it goes to `.trash`, to Drive's version history, or is kept as `Name (conflict date).md`.
 - **Renames** are detected both ways; a local rename moves the Drive file (keeping its ID and revision history).
@@ -88,7 +89,7 @@ git push --follow-tags
 
 This project is a fork of [**remotely-sync**](https://github.com/sboesen/remotely-sync) by sboesen, itself a fork of [remotely-save](https://github.com/remotely-save/remotely-save) by fyears. Both are licensed under the Apache License 2.0; thank you to both projects. The fork started from remotely-sync v0.4.49 (commit `21a9e01`).
 
-The Google Drive provider, OAuth flow and three-way sync planner in this repository were written from scratch against Google's public Drive v3 REST API documentation. No code from remotely-save's `pro/` folder or any other paid or differently-licensed code is included. Conflict-handling ideas are inspired by the [GitHub Gitless Sync](https://community.obsidian.md/plugins/github-gitless-sync) plugin (ideas only, no code).
+The Google Drive provider, OAuth flow and three-way sync planner in this repository were written from scratch against Google's public Drive v3 REST API documentation. No code from remotely-save's `pro/` folder or any other paid or differently-licensed code is included. Conflict-handling ideas are inspired by the [GitHub Gitless Sync](https://community.obsidian.md/plugins/github-gitless-sync) plugin, and the "sync after editing", "sync when leaving", offline-skip and restart-notice ideas by [Obsidian-Google-Drive](https://github.com/richardx366/Obsidian-Google-Drive) by Richard Xiong (ideas only, no code from either).
 
 Licensed under the Apache License 2.0. See [LICENSE](LICENSE).
 

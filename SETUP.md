@@ -24,8 +24,8 @@ Google will not send a sign-in result straight back to an `obsidian://` link for
 
 ### Option A (simplest): make this repository public
 Nothing secret is in the repo (your client ID and secret live only in plugin settings).
-1. GitHub → this repo → **Settings → General → Danger Zone → Change visibility → Public**.
-2. **Settings → Pages → Build and deployment → Source: GitHub Actions**.
+1. GitHub → this repo → **Settings → General → Danger Zone → Change visibility → Public**. *(Done.)*
+2. **Settings → Pages → Build and deployment → Source: GitHub Actions**. Only you can do this; it's a repository setting.
 3. Go to **Actions → "Deploy OAuth callback page" → Run workflow**, choosing your **default branch** (GitHub only lets the default branch deploy to Pages). After that it redeploys automatically whenever `callback/` changes on `main`.
 4. When it finishes, open `https://heeralaljrahul.github.io/obsidian-remote-sync/callback/`. You should see "Nothing to do here". That URL (**with the trailing `/`**) is your **redirect URI**, and it's already the plugin's default.
 
@@ -69,6 +69,20 @@ Why: while an External app is in **Testing**, Google expires its sign-ins (refre
 You do **not** need to submit the app for verification. The Drive scope is a "restricted" scope, so an unverified production app shows a warning screen and is capped at 100 users, which is fine for one person.
 
 > If you published *after* already signing in, sign in again once (or paste a fresh refresh token) so you get a token without the 7-day limit.
+
+### Make sure your sign-in never expires
+
+You don't want to sign in again every week. Here is everything that can end a Google sign-in, and how this setup avoids each:
+
+| What ends a sign-in | Avoided by |
+|---|---|
+| App left in **Testing**: Google ends it after **7 days** | **Publish app → In production** (above). The status must say *In production*. Then sign in again once, because sign-ins made while in Testing keep their 7-day limit. |
+| Not used for **6 months** | Every sync uses it. Just open Obsidian on each device at least once every 6 months. |
+| You remove access at myaccount.google.com/permissions, or press **Sign out** in the plugin | Don't 🙂 |
+| You delete or reset the OAuth client's **secret**, or delete the client/project | Keep the client; if you add a new secret, enter it on every device. |
+| Too many sign-ins: Google keeps at most about 100 per app per account and silently drops the oldest | Sign in once per device (or once on the PC and paste the refresh token on the others). |
+
+How to check: **Settings → Google account** shows *"No expiry"* when Google didn't attach an expiry date to your sign-in. If Google ever announces one, the plugin shows a warning there and at the next sync, with the expiry date. There is no hidden trick that makes a "Testing" app's sign-in last longer than 7 days; publishing to production is the supported way, it's free, and it doesn't require Google's verification for personal use.
 
 ## Step 4: Create the OAuth client
 
@@ -131,6 +145,7 @@ What the plugin actually does with full access: it lists and changes files **onl
 | `redirect_uri_mismatch` on Google's page | The redirect URI in the plugin and in the OAuth client must match character for character, including the trailing `/`. |
 | Callback page shows 404 | GitHub Pages isn't deployed yet (step 0), or the repo is private on a free plan. |
 | "Google rejected the saved sign-in (expired or revoked)" every week | The app is still in **Testing**. Publish it (step 3) and sign in again once. |
+| "Your sign-in expires in N days" | Same: publish the app to **In production**, then **Sign out** and **Sign in with Google** again. |
 | "Google Drive access was not granted" | Tick the Drive checkbox on Google's permission screen. |
 | "Folder not found with the current permission scope" | In privacy mode the plugin can't see folders it didn't create. Use Full Drive, or create the folder from the plugin. |
 | `access_denied` / "app is blocked" | Check you're signing in with the same Google account that owns the project, and that the app is published. |

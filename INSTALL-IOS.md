@@ -71,11 +71,17 @@ The safest order is **PC → iPhone → iPad**: the PC has the most complete cop
 
 Then repeat on the iPad.
 
+**Big vault? Speed tip.** Instead of letting the phone download everything, you can copy the vault folder onto the phone first (e.g. download the Drive folder as a zip in the Files app, unzip it into *On My iPhone → Obsidian*, and open it as the vault). The first sync then only compares checksums: identical files are recorded as already in sync, nothing is downloaded twice, and only real differences show up.
+
+**You can rename or move the vault folder in Google Drive** at any time; the plugin remembers it by its folder ID, not by its name.
+
 ---
 
 ## Everyday use
 
-- **Automatic:** when Obsidian opens, when you return to it (at most once a minute), and every N minutes if you set an interval.
+- **Automatic:** when Obsidian opens, when you return to it (at most once a minute), when you **leave** Obsidian with unsynced edits (on by default), optionally a set number of seconds **after you stop editing**, and every N minutes if you set an interval. Automatic syncs are skipped quietly while you're offline.
+- **Recommended on iPhone/iPad:** keep *Sync when leaving Obsidian* on and set *Sync after you stop editing* to `60`. Your edits then reach Drive while the app is still open, instead of waiting for the next time you open it.
+- **Settings and plugins:** if you turned on *Sync the .obsidian folder* and another device changed settings or plugins, you'll be asked to restart Obsidian to apply them.
 - **Manual:** the sync icon (🔄) or the **Sync now** command.
 - **Dry run:** command **Dry run**, or the button in settings. It shows what would happen without changing anything.
 - **Deletions** go to the vault's **`.trash`** folder (restore it with Obsidian's file explorer or a file manager) and to **Google Drive's trash** (restorable for 30 days).
