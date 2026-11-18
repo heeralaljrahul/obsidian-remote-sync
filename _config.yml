@@ -1,0 +1,32 @@
+# GitHub Pages site: the guide (README), SETUP, INSTALL-IOS and the OAuth callback page.
+title: Google Drive Vault Sync
+description: Personal Obsidian plugin for two-way sync with your own Google Drive (Windows, iPhone, iPad).
+theme: jekyll-theme-primer
+markdown: kramdown
+kramdown:
+  input: GFM
+plugins:
+  - jekyll-relative-links
+  - jekyll-optional-front-matter
+  - jekyll-readme-index
+  - jekyll-default-layout
+  - jekyll-titles-from-headings
+  - jekyll-seo-tag
+relative_links:
+  enabled: true
+  collections: false
+# Only the docs and the callback page are published, never the source code.
+exclude:
+  - src
+  - tests
+  - scripts
+  - node_modules
+  - package.json
+  - package-lock.json
+  - tsconfig.json
+  - tsconfig.test.json
+  - esbuild.config.mjs
+  - main.js
+  - manifest.json
+  - versions.json
+  - styles.css

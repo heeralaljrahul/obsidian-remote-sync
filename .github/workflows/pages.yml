@@ -1,13 +1,16 @@
-name: Deploy OAuth callback page
+name: Deploy docs site and OAuth callback page
 
-# Publishes callback/index.html to GitHub Pages at
-#   https://<user>.github.io/<repo>/callback/
+# Publishes the GitHub Pages site https://<user>.github.io/<repo>/ :
+#   - the guide (README.md -> index), SETUP.md, INSTALL-IOS.md
+#   - callback/index.html, the Google sign-in callback page (copied byte-for-byte)
+# Rebuilt on every push to main that changes any of them, so the site always
+# matches the repository. Source code is never published (see _config.yml).
 # One-time setup: repo Settings -> Pages -> Source: "GitHub Actions" (see SETUP.md).
 # Until that is done, this workflow skips the deploy with a warning instead of failing.
 on:
   push:
     branches: [main]
-    paths: ["callback/**", ".github/workflows/pages.yml"]
+    paths: ["**.md", "callback/**", "_config.yml", ".github/workflows/pages.yml"]
   workflow_dispatch:
 
 permissions:
@@ -46,16 +49,22 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}callback/
+      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v5
-      - name: Assemble site
-        run: |
-          mkdir -p _site/callback
-          cp callback/index.html _site/callback/index.html
-          touch _site/.nojekyll
-          printf '<!doctype html><meta charset="utf-8"><title>gdrive-vault-sync</title><p>This site only hosts the Google sign-in callback page for a personal Obsidian plugin.</p>' > _site/index.html
       - uses: actions/configure-pages@v5
+      # GitHub's own Pages builder (same as "Deploy from a branch"): renders the
+      # Markdown with the Primer theme, fixes links between pages, keeps the
+      # callback page unchanged.
+      - uses: actions/jekyll-build-pages@v1
+        with:
+          source: ./
+          destination: ./_site
+      - name: Check the callback page was published unchanged
+        run: |
+          cmp callback/index.html _site/callback/index.html
+          test -f _site/index.html && grep -q "Complete setup guide" _site/index.html
+          ! test -e _site/src && ! test -e _site/main.js
       - uses: actions/upload-pages-artifact@v3
         with:
           path: _site
