@@ -11,7 +11,9 @@ import { GDriveSettingTab } from "./obsidian/settingTab";
 import { DEFAULT_SETTINGS, type GDriveSettings } from "./settings";
 import { prepare, runPlan, type EngineDeps } from "./sync/engine";
 import { IgnoreFilter } from "./sync/ignore";
-import { summarize } from "./sync/planner";
+import { isDeletion, summarize } from "./sync/planner";
+import { reviewReason } from "./sync/planView";
+import { LogModal, PlanReviewModal } from "./obsidian/modals";
 import { BaseStore } from "./sync/store";
 import { randomString } from "./gdrive/oauth";
 
@@ -31,6 +33,10 @@ export default class GDriveSyncPlugin extends Plugin {
   private ribbon: HTMLElement | null = null;
   private statusBar: HTMLElement | null = null;
   private intervalId: number | null = null;
+  /** Avoid repeating the "needs review" notice on every automatic trigger. */
+  private reviewNoticeShown = false;
+  /** Conflicts persist until resolved; only notify when the set changes. */
+  private lastConflictKey = "";
 
   async onload() {
     await this.loadSettings();
@@ -58,6 +64,7 @@ export default class GDriveSyncPlugin extends Plugin {
 
     this.addCommand({ id: "sync-now", name: "Sync now", callback: () => void this.sync("manual") });
     this.addCommand({ id: "dry-run", name: "Dry run (show what a sync would do)", callback: () => void this.sync("dry-run") });
+    this.addCommand({ id: "show-log", name: "Show sync log", callback: () => this.showLog() });
 
     this.registerObsidianProtocolHandler(AUTH_ACTION, (p) => void this.onAuthCallback(p));
     this.addSettingTab(new GDriveSettingTab(this.app, this));
@@ -287,10 +294,29 @@ export default class GDriveSyncPlugin extends Plugin {
         throw new Error("The local vault looks empty but was synced before. Refusing to sync (this would delete files in Drive). Check the vault, or reset the sync state in settings.");
       }
 
-      if (trigger === "dry-run") {
-        for (const a of prep.plan.actions) this.log.info(`[dry run] ${JSON.stringify(a, ["kind", "path", "from", "to", "reason", "type"])}`);
-        new Notice(`Dry run: ${JSON.stringify(counts)}. Details are in the sync log.`, 10000);
-        return;
+      const review = reviewReason(prep.plan, trigger === "dry-run", s.deleteConfirmThreshold);
+      if (review) {
+        if (!manual) {
+          // Never run a first sync or a mass deletion unattended.
+          const why = review === "first-sync" ? "The first sync needs your review" : `This sync would trash ${prep.plan.actions.filter(isDeletion).length} items and needs your review`;
+          this.log.warn(`${why}; automatic sync paused until you tap the sync icon`);
+          if (!this.reviewNoticeShown) new Notice(`Google Drive: ${why}. Tap the sync icon to review it.`, 10000);
+          this.reviewNoticeShown = true;
+          return;
+        }
+        // Full plan in the log (capped) so it can be read later on the phone.
+        const MAX_LINES = 500;
+        for (const a of prep.plan.actions.slice(0, MAX_LINES)) this.log.info(`[${review}] ${JSON.stringify(a, ["kind", "path", "from", "to", "reason", "type"])}`);
+        if (prep.plan.actions.length > MAX_LINES) this.log.info(`[${review}] …and ${prep.plan.actions.length - MAX_LINES} more actions`);
+        this.log.info(`waiting for review (${review}): ${JSON.stringify(counts)}`);
+        this.updateStatus("waiting for your review");
+        await this.log.flush();
+        const run = await new PlanReviewModal(this.app, prep.plan, review).ask();
+        if (!run) {
+          this.log.info(review === "dry-run" ? "dry run closed" : "sync cancelled by user");
+          return;
+        }
+        this.reviewNoticeShown = false;
       }
 
       const res = await runPlan(deps, prep.plan);
@@ -298,17 +324,24 @@ export default class GDriveSyncPlugin extends Plugin {
       await this.saveSettings();
       const msg = `Sync finished: ${res.done} change(s)` + (res.conflicts.length ? `, ${res.conflicts.length} conflict(s) left untouched` : "") + (res.skipped.length ? `, ${res.skipped.length} skipped` : "") + (res.failed.length ? `, ${res.failed.length} FAILED` : "") + (res.stopped ? " (stopped early, will resume)" : "");
       this.log.info(msg);
-      if (manual || res.failed.length > 0 || res.conflicts.length > 0) new Notice(msg, 8000);
+      const conflictKey = res.conflicts.map((c) => ("path" in c ? c.path : "")).sort().join("\n");
+      const newConflicts = conflictKey !== "" && conflictKey !== this.lastConflictKey;
+      this.lastConflictKey = conflictKey;
+      if (manual || res.failed.length > 0 || newConflicts) new Notice(msg, 8000);
     } catch (e) {
       const m = errMsg(e);
       this.log.error(`sync aborted: ${m}`);
-      if (manual || e instanceof AuthError) new Notice(`Google Drive sync failed: ${m}`, 12000);
+      if (manual || e instanceof AuthError) new Notice(`Google Drive sync failed: ${m}\nDetails: command "Show sync log".`, 12000);
     } finally {
       this.running = false;
       this.setSpinning(false);
       this.updateStatus();
       await this.log.flush();
     }
+  }
+
+  showLog() {
+    new LogModal(this.app, this.log).open();
   }
 
   private setSpinning(on: boolean) {

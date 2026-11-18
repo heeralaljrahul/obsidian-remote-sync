@@ -286,6 +286,31 @@ export class GDriveSettingTab extends PluginSettingTab {
         })
       );
 
+    // ---------- Safety & troubleshooting ----------
+    new Setting(containerEl).setName("Safety and troubleshooting").setHeading();
+    containerEl.createEl("p", {
+      cls: "setting-item-description",
+      text: "Deleted files are never removed permanently: they go to this vault's .trash folder or to Google Drive's trash. The first sync with a folder always shows a dry run for you to approve, and never deletes anything.",
+    });
+    new Setting(containerEl)
+      .setName("Ask before trashing more than")
+      .setDesc("If one sync would move more than this many files/folders to the trash, it waits for your confirmation (automatic syncs pause until you tap the sync icon).")
+      .addText((t) =>
+        t.setValue(String(s.deleteConfirmThreshold)).onChange(async (v) => {
+          const n = Math.floor(Number(v));
+          s.deleteConfirmThreshold = Number.isFinite(n) && n >= 0 ? n : 20;
+          await save();
+        })
+      );
+    new Setting(containerEl)
+      .setName("Dry run")
+      .setDesc("Show what a sync would upload, download and trash, without changing anything.")
+      .addButton((b) => b.setButtonText("Dry run").onClick(() => void p.sync("dry-run")));
+    new Setting(containerEl)
+      .setName("Sync log")
+      .setDesc("What happened during recent syncs: useful when something looks wrong on your phone.")
+      .addButton((b) => b.setButtonText("View log").onClick(() => p.showLog()));
+
     // ---------- Advanced ----------
     new Setting(containerEl).setName("Advanced").setHeading();
     new Setting(containerEl)

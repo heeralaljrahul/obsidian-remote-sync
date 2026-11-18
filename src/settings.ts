@@ -29,6 +29,8 @@ export interface GDriveSettings {
   ignorePatterns: string;
   /** 0 = no limit */
   maxFileSizeMB: number;
+  /** Ask before a sync trashes more than this many files/folders. */
+  deleteConfirmThreshold: number;
 
   /** Random ID for this installation; names the local IndexedDB store. */
   installId: string;
@@ -53,6 +55,7 @@ export const DEFAULT_SETTINGS: GDriveSettings = {
   syncConfigDir: false,
   ignorePatterns: DEFAULT_IGNORE_PATTERNS,
   maxFileSizeMB: 200,
+  deleteConfirmThreshold: 20,
   installId: "",
   lastSyncAt: 0,
 };
