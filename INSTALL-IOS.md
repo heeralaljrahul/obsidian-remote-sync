@@ -53,7 +53,7 @@ The safest order is **PC → iPhone → iPad**: the PC has the most complete cop
 4. Because it's the first sync, you get a **dry run** first: nothing has been changed yet. Read it:
    - **Uploads**: files only on your PC.
    - **Downloads**: files only in Drive.
-   - **Conflicts**: files that exist on both sides with different content. They are **left alone** on both sides (a conflict screen comes in a later version; until then you can fix them by hand: make both copies identical, or delete one copy, and the next sync settles it).
+   - **Conflicts**: files that exist on both sides with different content. The sync leaves them alone; right after it finishes, the **conflict view** opens so you can choose per file (see below).
    - **Already in sync**: identical files. They're just recorded, not transferred again.
    - **Deletions**: always empty on a first sync.
 5. If it looks right, tap **Run first sync**. Otherwise **Cancel**: nothing happens.
@@ -81,7 +81,12 @@ Then repeat on the iPad.
 - **Deletions** go to the vault's **`.trash`** folder (restore it with Obsidian's file explorer or a file manager) and to **Google Drive's trash** (restorable for 30 days).
 - **Big deletions:** if a sync would trash more than 20 items (adjustable), it asks first; automatic syncs pause and tell you to tap the sync icon.
 - **Sync log:** command **Show sync log**, or **Settings → View log**. It's the first place to look if something seems off; **Copy** puts the whole log on the clipboard.
-- **Editing the same note on two devices before syncing** makes it a conflict: both versions are kept untouched and listed in the sync result.
+- **Editing the same note on two devices before syncing** makes it a conflict. After a manual sync the **conflict view** opens; after an automatic sync you get a notice: tap it (or run **Resolve sync conflicts**). For each file you see what changed: red lines are the Drive version, green lines are this device's version. Then choose:
+  - **Keep this device**: replaces the Drive version (the old one stays in Drive's version history: right-click the file in drive.google.com → *Manage versions*).
+  - **Keep the Drive version**: replaces this device's version (the old one goes to the vault's `.trash`).
+  - **Keep both**: the Drive version keeps the name and this device's version is saved as `Name (conflict 2026-11-18 1430).md` on all devices. Merge them by hand later if you like.
+  - **Decide later**: nothing changes; the conflict shows up again next time.
+  For non-text files (images, PDFs) there's no diff; compare the sizes and dates shown.
 
 ## If something goes wrong
 
@@ -90,3 +95,4 @@ Then repeat on the iPad.
 3. "The local vault looks empty but was synced before": the plugin refuses to sync because it would otherwise trash everything in Drive. Check you opened the right vault. If you really started over on this device, use **Settings → Reset sync state**: the next sync is then treated as a first sync (dry run first, no deletions).
 4. Files with the same name twice in one Drive folder (Drive allows that) are skipped and listed in the log. Rename or delete the extra copy in Drive.
 5. Files are restorable from `.trash` (local) and Drive's trash, and you have the backup from the start.
+6. "…changed after you opened it" when resolving a conflict: the file was edited (here or on another device) while the conflict view was open. Close it and run **Resolve sync conflicts** again to see the latest versions.

@@ -9,11 +9,14 @@ import { ObsidianLocalFs } from "./obsidian/localFs";
 import { obsidianHttp } from "./obsidian/obsidianHttp";
 import { GDriveSettingTab } from "./obsidian/settingTab";
 import { DEFAULT_SETTINGS, type GDriveSettings } from "./settings";
-import { prepare, runPlan, safetyCheck, type EngineDeps } from "./sync/engine";
+import { md5Hex, prepare, runPlan, safetyCheck, type EngineDeps } from "./sync/engine";
 import { IgnoreFilter } from "./sync/ignore";
 import { isDeletion, summarize } from "./sync/planner";
 import { reviewReason } from "./sync/planView";
 import { LogModal, PlanReviewModal } from "./obsidian/modals";
+import { ConflictModal } from "./obsidian/conflictModal";
+import { resolveConflict, type ConflictItem } from "./sync/resolve";
+import type { Action } from "./sync/types";
 import { BaseStore } from "./sync/store";
 import { randomString } from "./gdrive/oauth";
 
@@ -65,6 +68,7 @@ export default class GDriveSyncPlugin extends Plugin {
     this.addCommand({ id: "sync-now", name: "Sync now", callback: () => void this.sync("manual") });
     this.addCommand({ id: "dry-run", name: "Dry run (show what a sync would do)", callback: () => void this.sync("dry-run") });
     this.addCommand({ id: "show-log", name: "Show sync log", callback: () => this.showLog() });
+    this.addCommand({ id: "resolve-conflicts", name: "Resolve sync conflicts", callback: () => void this.reviewConflicts() });
 
     this.registerObsidianProtocolHandler(AUTH_ACTION, (p) => void this.onAuthCallback(p));
     this.addSettingTab(new GDriveSettingTab(this.app, this));
@@ -282,6 +286,7 @@ export default class GDriveSyncPlugin extends Plugin {
       return;
     }
     this.running = true;
+    let pendingConflicts: ConflictItem[] | null = null;
     this.setSpinning(true);
     this.updateStatus("Syncing…");
     this.log.info(`--- ${trigger} sync started ---`);
@@ -325,7 +330,16 @@ export default class GDriveSyncPlugin extends Plugin {
       const conflictKey = res.conflicts.map((c) => ("path" in c ? c.path : "")).sort().join("\n");
       const newConflicts = conflictKey !== "" && conflictKey !== this.lastConflictKey;
       this.lastConflictKey = conflictKey;
-      if (manual || res.failed.length > 0 || newConflicts) new Notice(msg, 8000);
+      if (manual || res.failed.length > 0) new Notice(msg, 8000);
+      if (res.conflicts.length > 0) {
+        if (manual) {
+          pendingConflicts = toConflictItems(res.conflicts);
+        } else if (newConflicts) {
+          const n = new Notice(`Google Drive: ${res.conflicts.length} file(s) were changed on both sides. Tap here to review.`, 15000);
+          n.noticeEl.addClass("gdvs-clickable");
+          n.noticeEl.addEventListener("click", () => void this.reviewConflicts());
+        }
+      }
     } catch (e) {
       const m = errMsg(e);
       this.log.error(`sync aborted: ${m}`);
@@ -336,6 +350,55 @@ export default class GDriveSyncPlugin extends Plugin {
       this.updateStatus();
       await this.log.flush();
     }
+    // Opened after the lock is released: resolving a conflict takes the lock itself.
+    if (pendingConflicts) this.openConflicts(pendingConflicts);
+  }
+
+  // ---------------- conflicts ----------------
+
+  /** Re-plan (read-only) and open the conflict view for whatever is in conflict right now. */
+  async reviewConflicts() {
+    if (this.running) {
+      new Notice("A sync is running; try again when it has finished.");
+      return;
+    }
+    const s = this.settings;
+    if (!s.clientId || !this.isSignedIn() || !s.folderId) {
+      new Notice("Google Drive sync is not set up yet: open the plugin settings.");
+      return;
+    }
+    this.running = true;
+    let items: ConflictItem[] = [];
+    try {
+      const prep = await prepare(this.engineDeps());
+      items = toConflictItems(prep.plan.actions);
+    } catch (e) {
+      new Notice(`Could not check for conflicts: ${errMsg(e)}`, 10000);
+      return;
+    } finally {
+      this.running = false;
+    }
+    if (items.length === 0) new Notice("No sync conflicts.");
+    else this.openConflicts(items);
+  }
+
+  private openConflicts(items: ConflictItem[]) {
+    const deps = this.engineDeps();
+    new ConflictModal(this.app, items, {
+      readLocal: (p) => deps.local.read(p),
+      readRemote: (id) => deps.remote.download(id),
+      resolve: async (c, choice) => {
+        if (this.running) throw new Error("a sync is running; try again in a moment");
+        this.running = true;
+        try {
+          return await resolveConflict(c, choice, { local: deps.local, remote: deps.remote, base: new BaseStore(this.kv, this.settings.folderId), log: this.log, md5: md5Hex });
+        } finally {
+          this.running = false;
+          this.lastConflictKey = "";
+          await this.log.flush();
+        }
+      },
+    }).open();
   }
 
   showLog() {
@@ -357,4 +420,10 @@ export default class GDriveSyncPlugin extends Plugin {
     const t = this.settings.lastSyncAt;
     this.statusBar.setText(t ? `Drive: synced ${new Date(t).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}` : "Drive: not synced yet");
   }
+}
+
+function toConflictItems(actions: Action[]): ConflictItem[] {
+  const out: ConflictItem[] = [];
+  for (const a of actions) if (a.kind === "conflict") out.push({ path: a.path, type: a.type, local: a.local, remote: a.remote });
+  return out;
 }

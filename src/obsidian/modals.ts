@@ -9,7 +9,7 @@ const MAX_ITEMS_PER_SECTION = 300;
 const INTRO: Record<ReviewReason, string> = {
   "dry-run": "Dry run: nothing has been changed. This is what a sync would do right now.",
   "first-sync":
-    "This is the first sync with this Drive folder on this device, so here is a dry run first. Nothing has been changed yet. The first sync never deletes anything: files that differ on both sides are listed as conflicts and left alone.",
+    "This is the first sync with this Drive folder on this device, so here is a dry run first. Nothing has been changed yet. The first sync never deletes anything: files that differ on both sides are listed as conflicts, and after the sync you choose which version to keep for each.",
   "many-deletions": "This sync would move many files to the trash. Check the list before continuing (trashed files can be restored from the vault's .trash folder and from Google Drive's trash).",
 };
 

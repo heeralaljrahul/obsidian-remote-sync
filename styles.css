@@ -22,8 +22,10 @@
 }
 
 /* ---- plan review + log modals ---- */
-.gdvs-modal {
-  width: min(720px, 96vw);
+/* Desktop only: on phones Obsidian already shows modals full-screen. */
+body:not(.is-mobile) .gdvs-modal {
+  width: min(760px, 90vw);
+  box-sizing: border-box;
 }
 .gdvs-summary {
   display: flex;
@@ -88,4 +90,90 @@
 }
 .gdvs-error .gdvs-log-msg {
   color: var(--text-error);
+}
+
+/* ---- conflict view ---- */
+.gdvs-clickable {
+  cursor: pointer;
+}
+.gdvs-resolved .setting-item-name {
+  color: var(--text-muted);
+}
+.gdvs-conflict-meta {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+@media (max-width: 600px) {
+  .gdvs-conflict-meta {
+    grid-template-columns: 1fr;
+  }
+}
+.gdvs-side {
+  padding: 6px 10px;
+  border-radius: var(--radius-s);
+}
+.gdvs-side-remote {
+  background: rgba(var(--color-red-rgb), 0.1);
+}
+.gdvs-side-local {
+  background: rgba(var(--color-green-rgb), 0.1);
+}
+.gdvs-diff {
+  max-height: 50vh;
+  overflow: auto;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-s);
+  font-family: var(--font-monospace);
+  font-size: var(--font-ui-smaller);
+  margin-bottom: 8px;
+}
+.gdvs-hunk-head {
+  position: sticky;
+  top: 0;
+  padding: 2px 8px;
+  background: var(--background-secondary);
+  color: var(--text-muted);
+  font-family: var(--font-interface);
+}
+.gdvs-line {
+  display: flex;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.gdvs-sign {
+  flex: 0 0 1.5em;
+  text-align: center;
+  user-select: none;
+}
+.gdvs-code {
+  flex: 1;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.gdvs-del {
+  background: rgba(var(--color-red-rgb), 0.15);
+}
+.gdvs-add {
+  background: rgba(var(--color-green-rgb), 0.15);
+}
+.gdvs-split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+.gdvs-cell {
+  display: flex;
+  border-right: 1px solid var(--background-modifier-border);
+  min-height: 1.4em;
+}
+.gdvs-cell.gdvs-empty {
+  background: var(--background-secondary-alt);
+}
+.gdvs-ln {
+  flex: 0 0 3em;
+  padding-right: 6px;
+  text-align: right;
+  color: var(--text-faint);
+  user-select: none;
 }

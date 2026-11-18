@@ -66,7 +66,7 @@ function item(a: Action): PlanItem {
 }
 
 const SECTIONS: Array<{ key: string; title: string; warn: boolean; match: (a: Action) => boolean }> = [
-  { key: "conflict", title: "Conflicts (left untouched)", warn: true, match: (a) => a.kind === "conflict" },
+  { key: "conflict", title: "Conflicts (you choose after the sync)", warn: true, match: (a) => a.kind === "conflict" },
   { key: "delete", title: "Deletions (to trash)", warn: true, match: isDeletion },
   { key: "upload", title: "Uploads to Drive", warn: false, match: (a) => a.kind === "upload" },
   { key: "download", title: "Downloads from Drive", warn: false, match: (a) => a.kind === "download" },

@@ -18,7 +18,7 @@ Two-way sync between an Obsidian vault and a folder in **your own** Google Drive
 - **Two-way sync** of your existing Drive folder (pick it by name, link or ID), between any number of devices.
 - **Sync now** ribbon icon and command; sync when Obsidian opens, when you return to it, and every N minutes (optional).
 - **Knows which side changed**: every file is compared with what both sides looked like at the last sync (MD5, size, modified time), instead of "newest timestamp wins".
-- **Conflicts are never overwritten**: a note edited on two devices is left untouched on both sides and reported. (A side-by-side conflict view is planned.)
+- **Conflict view**: a note edited on two devices is never silently overwritten. You get a list of conflicts and, per file, a diff (unified on phones, side-by-side optional on desktop) with **Keep this device / Keep Drive / Keep both**. The losing version is never thrown away: it goes to `.trash`, to Drive's version history, or is kept as `Name (conflict date).md`.
 - **Renames** are detected both ways; a local rename moves the Drive file (keeping its ID and revision history).
 - **Safe deletions**: always to Obsidian's `.trash` folder or Google Drive's trash, never permanent. The first sync never deletes anything.
 - **Dry run**: see planned uploads, downloads, deletions and conflicts without changing anything. It runs automatically before the first sync, which only starts after you approve.
@@ -41,13 +41,14 @@ Two-way sync between an Obsidian vault and a folder in **your own** Google Drive
    |---|---|---|---|
    | changed | unchanged | ✓ | upload |
    | unchanged | changed | ✓ | download |
-   | changed | changed | ✓ | conflict (unless identical) |
+   | changed | changed | ✓ | conflict → you choose (unless identical) |
    | present | present | – | identical: adopt; different: conflict |
    | deleted | unchanged | ✓ | move Drive copy to trash |
    | unchanged | deleted | ✓ | move local copy to `.trash` |
    | deleted | changed | ✓ | restore from Drive (the edit wins) |
 
 4. **Review** if needed (first sync, dry run, many deletions).
+   Conflicts are left untouched by the sync itself; you resolve them afterwards in the conflict view.
 5. **Execute** one action at a time. Each step re-checks that nothing changed since planning, and the last-synced state is saved after every file.
 
 Code map: `src/sync/` holds the planner, executor and engine (no Obsidian imports, unit-tested). `src/gdrive/` holds the Drive v3 client, OAuth/PKCE, index and provider. `src/obsidian/` holds the vault access, IndexedDB store, `requestUrl` transport, settings and modals. `callback/` is the GitHub Pages sign-in page.
