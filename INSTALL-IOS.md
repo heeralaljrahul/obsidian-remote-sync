@@ -1,5 +1,7 @@
 # Install on iPhone, iPad (and Windows) with BRAT, and do the first sync safely
 
+> **The complete, numbered walkthrough (backups → Google Cloud → GitHub release → PC → iPhone → iPad → tests) is in the [README](README.md#complete-setup-guide-step-by-step).** This page has extra background.
+
 This plugin isn't in Obsidian's community plugin list. You install it with **BRAT** (Beta Reviewers Auto-update Tester), which downloads it from this repository's GitHub releases and keeps it updated. The same steps work on Windows.
 
 Do **SETUP.md** first (Google Cloud project, client ID and secret, callback page).
@@ -88,7 +90,7 @@ Then repeat on the iPad.
 - **Big deletions:** if a sync would trash more than 20 items (adjustable), it asks first; automatic syncs pause and tell you to tap the sync icon.
 - **Sync log:** command **Show sync log**, or **Settings → View log**. It's the first place to look if something seems off; **Copy** puts the whole log on the clipboard.
 - **Editing the same note on two devices before syncing** makes it a conflict. After a manual sync the **conflict view** opens; after an automatic sync you get a notice: tap it (or run **Resolve sync conflicts**). For each file you see what changed: red lines are the Drive version, green lines are this device's version. Then choose:
-  - **Keep this device**: replaces the Drive version (the old one stays in Drive's version history: right-click the file in drive.google.com → *Manage versions*).
+  - **Keep this device**: replaces the Drive version (the old one stays in Drive's version history: right-click the file in drive.google.com → *File information → Manage versions*).
   - **Keep the Drive version**: replaces this device's version (the old one goes to the vault's `.trash`).
   - **Keep both**: the Drive version keeps the name and this device's version is saved as `Name (conflict 2026-11-18 1430).md` on all devices. Merge them by hand later if you like.
   - **Decide later**: nothing changes; the conflict shows up again next time.

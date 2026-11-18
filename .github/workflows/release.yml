@@ -1,11 +1,24 @@
 name: Release
 
-# Push a tag equal to the version in manifest.json (e.g. 0.1.0, no "v") to publish a
-# BRAT-compatible GitHub release with main.js, manifest.json and styles.css.
+# Builds, tests and attaches main.js, manifest.json and styles.css (what BRAT
+# installs) to a GitHub release whose tag equals manifest.json's "version"
+# (e.g. 0.1.0, no "v").
+#
+# Start it either way:
+#   - on github.com: Releases -> "Draft a new release" -> new tag 0.1.0 -> Publish
+#     (this workflow then attaches the files to that release), or
+#   - from a terminal: `npm version 0.1.1` then `git push --follow-tags`.
 on:
+  release:
+    types: [published]
   push:
     tags:
       - "[0-9]+.[0-9]+.[0-9]+*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing tag to (re)build the release files for, e.g. 0.1.0"
+        required: true
 
 permissions:
   contents: write
@@ -13,35 +26,43 @@ permissions:
 jobs:
   release:
     runs-on: ubuntu-latest
+    concurrency:
+      group: release-${{ github.event.release.tag_name || github.event.inputs.tag || github.ref_name }}
+      cancel-in-progress: false
+    env:
+      TAG: ${{ github.event.release.tag_name || github.event.inputs.tag || github.ref_name }}
     steps:
       - uses: actions/checkout@v5
+        with:
+          ref: ${{ env.TAG }}
       - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
+
+      - name: Check tag matches manifest.json and versions.json
+        run: |
+          VERSION=$(node -p "require('./manifest.json').version")
+          if [ "$TAG" != "$VERSION" ]; then
+            echo "::error::Release tag '$TAG' does not match manifest.json version '$VERSION'. Name the tag exactly $VERSION (no 'v')."
+            exit 1
+          fi
+          node -e "const v=require('./versions.json'); if(!v['$TAG']) { console.error('versions.json has no entry for $TAG'); process.exit(1) }"
+
       - run: npm ci
       - run: npx playwright install --with-deps chromium
       - run: npm test
       - run: npm run build
 
-      - name: Check tag matches manifest.json and versions.json
-        run: |
-          TAG="${GITHUB_REF_NAME}"
-          MANIFEST=$(node -p "require('./manifest.json').version")
-          if [ "$TAG" != "$MANIFEST" ]; then
-            echo "::error::Tag $TAG does not match manifest.json version $MANIFEST. Use 'npm version <x.y.z>' to bump both."
-            exit 1
-          fi
-          node -e "const v=require('./versions.json'); if(!v['$TAG']) { console.error('versions.json has no entry for $TAG'); process.exit(1) }"
-
-      - name: Create GitHub release
+      - name: Attach files to the release (create it if needed)
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          TAG="${GITHUB_REF_NAME}"
-          PRERELEASE=""
-          case "$TAG" in *-*) PRERELEASE="--prerelease" ;; esac
-          gh release create "$TAG" main.js manifest.json styles.css \
-            --title "$TAG" \
-            --notes "Install or update with BRAT (see INSTALL-IOS.md). Assets: main.js, manifest.json, styles.css." \
-            $PRERELEASE
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" main.js manifest.json styles.css --clobber
+          else
+            PRERELEASE=""
+            case "$TAG" in *-*) PRERELEASE="--prerelease" ;; esac
+            gh release create "$TAG" main.js manifest.json styles.css --verify-tag --title "$TAG" \
+              --notes "Install or update with BRAT: add https://github.com/${GITHUB_REPOSITORY}. Assets: main.js, manifest.json, styles.css." $PRERELEASE
+          fi
