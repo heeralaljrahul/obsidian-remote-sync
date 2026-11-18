@@ -1,7 +1,7 @@
 import { expect } from "chai";
 import { multipartBody, qEscape } from "../src/gdrive/driveApi";
 import { isRetryable, withRetry, type HttpResponse } from "../src/gdrive/http";
-import { AuthError, pkceChallenge, startAuth, TokenManager, type Tokens } from "../src/gdrive/oauth";
+import { AuthError, exchangeCode, pkceChallenge, startAuth, TokenManager, type Tokens } from "../src/gdrive/oauth";
 import { parseFolderId } from "../src/settings";
 import { DEFAULT_IGNORE_PATTERNS, IgnoreFilter } from "../src/sync/ignore";
 import { normKey } from "../src/sync/paths";
@@ -126,6 +126,20 @@ describe("OAuth", () => {
     expect(q.get("scope")).to.equal("https://www.googleapis.com/auth/drive");
     expect(q.get("redirect_uri")).to.equal("https://example.github.io/cb/");
     expect(pending.verifier.length).to.be.within(43, 128);
+  });
+  it("rejects a sign-in where the Drive checkbox was left unticked", async () => {
+    const http = async () => res(200, { access_token: "a", expires_in: 3600, refresh_token: "r", scope: "openid" });
+    let err: unknown;
+    try {
+      await exchangeCode(http, { clientId: "c", clientSecret: "s", redirectUri: "u", code: "x", verifier: "v", requiredScope: "drive" });
+    } catch (e) {
+      err = e;
+    }
+    expect(String(err)).to.match(/tick the Google Drive checkbox/);
+    const ok = await exchangeCode(async () => res(200, { access_token: "a", expires_in: 3600, refresh_token: "r", scope: "https://www.googleapis.com/auth/drive" }), {
+      clientId: "c", clientSecret: "s", redirectUri: "u", code: "x", verifier: "v", requiredScope: "drive",
+    });
+    expect(ok.refreshToken).to.equal("r");
   });
   it("refreshes an expired access token once, even with concurrent callers, and saves it", async () => {
     let tokens: Tokens = { accessToken: "old", expiresAt: 0, refreshToken: "rt", scope: "" };

@@ -161,6 +161,7 @@ export default class GDriveSyncPlugin extends Plugin {
         redirectUri: this.settings.redirectUri,
         code: code.trim(),
         verifier: pending.verifier,
+        requiredScope: this.settings.scope,
       });
       await this.setTokens(t);
       this.settings.pendingAuth = null;

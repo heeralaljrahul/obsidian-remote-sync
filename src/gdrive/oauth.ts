@@ -98,7 +98,7 @@ async function tokenRequest(http: HttpFn, form: Record<string, string>): Promise
 
 export async function exchangeCode(
   http: HttpFn,
-  a: { clientId: string; clientSecret: string; redirectUri: string; code: string; verifier: string }
+  a: { clientId: string; clientSecret: string; redirectUri: string; code: string; verifier: string; requiredScope?: ScopeMode }
 ): Promise<Tokens> {
   const t = await tokenRequest(http, {
     client_id: a.clientId,
@@ -110,6 +110,10 @@ export async function exchangeCode(
   });
   if (!t.refresh_token) {
     throw new Error("Google did not return a refresh token. Remove the app's access at myaccount.google.com/permissions and sign in again.");
+  }
+  // Google's consent screen has per-permission checkboxes; an unticked Drive box still "succeeds".
+  if (a.requiredScope && t.scope !== undefined && !t.scope.split(" ").includes(scopeUrl(a.requiredScope))) {
+    throw new Error("Google Drive access was not granted. Sign in again and tick the Google Drive checkbox on Google's consent screen.");
   }
   return { accessToken: t.access_token, expiresAt: Date.now() + t.expires_in * 1000, refreshToken: t.refresh_token, scope: t.scope ?? "" };
 }
