@@ -70,3 +70,27 @@ jobs:
           path: _site
       - id: deployment
         uses: actions/deploy-pages@v4
+
+  # The website is the guide people actually read, so it must always match the
+  # repository. After deploying, download the live files and compare; fail
+  # loudly (red run + email) if they still differ after a few minutes.
+  verify:
+    needs: deploy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Live website matches the repository
+        run: |
+          BASE="https://${GITHUB_REPOSITORY_OWNER}.github.io/${GITHUB_REPOSITORY#*/}"
+          FILES="README.md SETUP.md INSTALL-IOS.md PRIVACY.md SECURITY.md CHANGELOG.md THIRD_PARTY_NOTICES.md NOTICE LICENSE callback/index.html"
+          for attempt in $(seq 1 30); do
+            bad=""
+            for f in $FILES; do
+              curl -fsS "$BASE/$f?v=$GITHUB_SHA-$attempt" -o /tmp/live 2>/dev/null && cmp -s /tmp/live "$f" || bad="$bad $f"
+            done
+            curl -fsS "$BASE/?v=$GITHUB_SHA-$attempt" | grep -q "Complete setup guide" || bad="$bad (index page)"
+            if [ -z "$bad" ]; then echo "Website matches the repository: $FILES"; exit 0; fi
+            echo "Attempt $attempt: not updated yet:$bad"; sleep 10
+          done
+          echo "::error title=Website out of date::These files on $BASE differ from the repository:$bad"
+          exit 1

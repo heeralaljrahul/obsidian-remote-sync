@@ -30,3 +30,4 @@ exclude:
   - manifest.json
   - versions.json
   - styles.css
+  - CLAUDE.md
