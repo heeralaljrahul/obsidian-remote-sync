@@ -13,7 +13,7 @@ Do **SETUP.md** first (Google Cloud project, client ID and secret, callback page
 ### 1. Don't keep the vault in iCloud
 **Do not let iCloud (or OneDrive, Dropbox, Obsidian Sync…) sync this same vault while this plugin syncs it.** Two sync systems working on the same files will fight each other: one overwrites or re-creates what the other just deleted, and you can lose data.
 
-On iPhone/iPad, create the vault **On My iPhone** / **On My iPad**, not in iCloud Drive. Obsidian asks when you create a vault ("Store in iCloud" must be **off**). If your current phone vault is in iCloud, make a new local vault for this plugin instead of reusing it.
+On iPhone/iPad, create the vault **On My iPhone** / **On My iPad**, not in iCloud Drive. The **Store in iCloud** switch is on the "Create new vault" screen, below the vault name: it must be **grey (off)**. To check afterwards, open Apple's **Files** app → **Browse** → **On My iPhone** (or **On My iPad**) → **Obsidian**: your vault's folder must be there, not under **iCloud Drive → Obsidian**. If your current phone vault is in iCloud, make a new local vault for this plugin instead of reusing it (see the README, Part 8.2b).
 
 ### 2. Back up
 - **PC:** copy your whole vault folder somewhere safe (e.g. right-click → Send to → Compressed (zipped) folder).

@@ -300,12 +300,28 @@ Open **Settings** → scroll the left list down to **Google Drive Vault Sync**.
 #### 8.2 Create a new, empty vault (not in iCloud, no Obsidian Sync)
 1. On the welcome screen tap **Create new vault** (or **Create a vault**).
 2. **Vault name:** anything you like, e.g. `Notes`. It doesn't have to match the PC.
-3. **Store in iCloud:** make sure it is **off** (grey). The vault must live **On My iPhone**: two sync systems on one vault can lose data.
+3. **Store in iCloud:** on the same "Create new vault" screen, just below the vault-name box, there is a switch called **Store in iCloud**.
+   - **Green = on** (the vault would go to iCloud Drive). **Grey = off** (the vault goes to *On My iPhone*).
+   - Tap it so it is **grey (off)**.
+   - Why: the vault must live **On My iPhone**. If it lived in iCloud, iCloud and this plugin would both sync the same files, and two sync systems on one vault can lose data.
+   - *Don't see the switch?* On some setups Obsidian shows it only when iCloud Drive is turned on for your iPhone. If there's no switch, the vault goes to *On My iPhone* automatically. Check it with the steps in **8.2b** below.
 4. **Sync question:** Obsidian may ask whether to **set up sync**, offering choices like **Set up sync** and **Continue without sync**.
    - Choose **Continue without sync** (the option that does **not** set up sync).
    - **Don't choose "Set up sync":** that's **Obsidian Sync**, Obsidian's own paid service. This plugin does the syncing instead; using both would be two sync systems on one vault.
 5. Tap **Create**. Obsidian opens the new, empty vault.
    - *Already have a vault in iCloud?* Leave it alone and use this new local one with the plugin.
+
+#### 8.2b Check that the vault is NOT in iCloud (30 seconds)
+1. Leave Obsidian and open Apple's **Files** app (blue folder icon).
+2. Tap **Browse** (bottom right). Under **Locations** you'll see **iCloud Drive** and **On My iPhone**.
+3. Tap **On My iPhone** → **Obsidian**. ✅ **Your new vault's folder (e.g. `Notes`) should be here.**
+4. To double-check, go back and tap **iCloud Drive** → **Obsidian** (if that folder exists). ❌ Your new vault should **not** be in there.
+
+**If the vault ended up in iCloud Drive** (the switch was on by mistake), it's easy to fix, because the vault is still empty:
+1. In Obsidian, open the vault switcher: open the left sidebar, tap the **vault name** (at the top or bottom of the sidebar), then **Manage vaults**.
+2. Tap **Create new vault**, give it a different name (e.g. `Notes local`), turn **Store in iCloud off (grey)**, choose **Continue without sync**, and tap **Create**.
+3. Check again with the **Files** app (steps 1–3 above), and use only this new vault from now on.
+4. Optional: remove the old iCloud vault in **Manage vaults** (it's empty, so nothing is lost).
 
 #### 8.3 Allow community plugins and install BRAT
 1. **Open Settings:** swipe right from the left edge of the screen (or tap the sidebar icon at the top left), then tap the **⚙ gear**.
@@ -351,7 +367,7 @@ Open **Settings** → scroll down the left list (on iPhone: the list of plugin s
 
 Do **exactly the same as Part 8** on the iPad:
 1. Install Obsidian.
-2. Create a new vault: **Store in iCloud off**, and at the sync question choose **Continue without sync** (not "Set up sync").
+2. Create a new vault: **Store in iCloud off** (the switch on the "Create new vault" screen must be grey), and at the sync question choose **Continue without sync** (not "Set up sync"). Then check it in the **Files** app → **Browse** → **On My iPad** → **Obsidian** (see **8.2b**).
 3. Turn on community plugins and install BRAT.
 4. Add this plugin with BRAT.
 5. Connect it: the same client ID and secret, sign in, and **the same Drive folder**.
