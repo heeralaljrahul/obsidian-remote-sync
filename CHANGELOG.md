@@ -12,4 +12,5 @@ All notable changes to this project. Versions follow [semantic versioning](https
 - Sync on open, on return, on leave, after editing, on an interval; offline-aware.
 - Security hardening: unsafe Drive file names (path traversal) blocked, tokens never logged or sent to other hosts, settings sanitised.
 - 190+ automated tests: unit, integration, security, network (including live Google endpoint probes), stress, randomized multi-device fuzzing, end-to-end tests of the built plugin in Chromium.
+- Privacy policy page (`PRIVACY.md`, published on the website) for Google's consent-screen Branding requirements.
 - Removed upstream's S3, Dropbox, OneDrive and WebDAV providers and Node polyfills (iOS-safe bundle).

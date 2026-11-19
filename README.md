@@ -138,14 +138,29 @@ The plugin needs permission to use your Google Drive. Instead of using someone e
 4. **Contact information:** your email. Click **Next**.
 5. Tick the box to agree to the policy → **Continue** → **Create**.
 
-#### 2.4 Publish the app (so you never have to log in again every 7 days)
+#### 2.4 Fill in Branding (Google needs this before you can publish)
+Google only lets you publish once the app has a **home page** and a **privacy policy** link. This project's website provides both.
+
+1. In the left menu click **Branding**.
+2. Fill in (leave anything not listed here empty, including the logo):
+   - **App name:** `Obsidian Drive Sync`
+   - **User support email:** your email
+   - **Application home page:** `https://heeralaljrahul.github.io/obsidian-remote-sync/`
+   - **Application privacy policy link:** `https://heeralaljrahul.github.io/obsidian-remote-sync/PRIVACY.html`
+   - **Application terms of service link:** leave empty (optional)
+   - **Authorized domains** → **+ Add domain**: `heeralaljrahul.github.io`
+   - **Developer contact information:** your email
+3. Click **Save**.
+   - *If Google asks you to verify ownership of the domain:* that's only needed if you submit the app for Google's review, which you don't need to do. Just save and continue. (If it blocks saving, ask for help: it can be verified with Google Search Console by adding a small file to this repository.)
+
+#### 2.5 Publish the app (so you never have to log in again every 7 days)
 1. In the left menu click **Audience**.
-2. You'll see **Publishing status: Testing**. Click **Publish app** → **Confirm**.
+2. You'll see **Publishing status: Testing**. Click **Publish app** → **Confirm**. (If the button is greyed out, hover over it: Google lists what's still missing on the Branding page.)
 3. It must now say **In production**.
 
 *Why:* while an app is in "Testing", Google ends every sign-in after **7 days**. "In production" sign-ins don't expire (as long as each device syncs at least once every 6 months). You do **not** need Google to "verify" your app; you'll just click past a warning once per device (Part 6).
 
-#### 2.5 Create the login keys ("OAuth client")
+#### 2.6 Create the login keys ("OAuth client")
 1. In the left menu click **Clients** (older screens: **APIs & Services → Credentials → + Create credentials → OAuth client ID**).
 2. Click **+ Create client**.
 3. **Application type: Web application.** Name: `Obsidian`.
@@ -218,7 +233,7 @@ First find out **where the vault you open in Obsidian on your PC lives**: in Obs
 
 Open **Settings** → scroll the left list down to **Google Drive Vault Sync**.
 
-1. **OAuth client ID:** paste the Client ID from Part 2.5.
+1. **OAuth client ID:** paste the Client ID from Part 2.6.
 2. **OAuth client secret:** paste the Client secret.
 3. **Redirect URI:** leave it as it is (`https://heeralaljrahul.github.io/obsidian-remote-sync/callback/`).
 4. **Permission scope:**
@@ -232,7 +247,7 @@ Open **Settings** → scroll the left list down to **Google Drive Vault Sync**.
    5. A page "Returning to Obsidian…" opens and the browser asks **Open Obsidian?** → click **Open**.
    6. Obsidian shows **Signed in to Google Drive as you@gmail.com**.
    - *Didn't jump back?* The page shows a code. Copy it, then in the plugin settings paste it into **Paste authorization code** → **Use code** (within a few minutes).
-6. The settings now say **Signed in as …** and **"No expiry"**. If instead you see "expires in N days", go back to Part 2.4 and publish the app, then **Sign out** and sign in again.
+6. The settings now say **Signed in as …** and **"No expiry"**. If instead you see "expires in N days", go back to Part 2.5 and publish the app, then **Sign out** and sign in again.
 7. **Drive vault folder:**
    - 🌐 Open <https://drive.google.com>, double-click your notes folder (Path A) or the new empty folder (Path B), and copy the whole address from the browser's address bar (it looks like `https://drive.google.com/drive/folders/1AbC…`).
    - 💻 Paste it into **Folder ID or link** → click **Use ID**. You'll see *Vault folder set to "…"*, and **Current folder** shows its name.
@@ -353,10 +368,10 @@ When all ✅: you're done. Delete the test notes (they'll be removed everywhere 
 
 | Problem | What to do |
 |---|---|
-| Google says `redirect_uri_mismatch` | The redirect URI in Part 2.5 must be exactly `https://heeralaljrahul.github.io/obsidian-remote-sync/callback/` (with the last `/`). |
+| Google says `redirect_uri_mismatch` | The redirect URI in Part 2.6 must be exactly `https://heeralaljrahul.github.io/obsidian-remote-sync/callback/` (with the last `/`). |
 | "Google hasn't verified this app" | Normal for your own app: **Advanced → Go to … (unsafe)**. |
 | "Google Drive access was not granted" | Sign in again and **tick the Drive checkbox**. |
-| Asked to sign in again after about a week | The app is still in **Testing**: Part 2.4 → **Publish app**, then sign out and in once on each device. |
+| Asked to sign in again after about a week | The app is still in **Testing**: Part 2.5 → **Publish app**, then sign out and in once on each device. |
 | "Folder not found" | You chose privacy mode with an existing folder, or a different Google account. Use **Full Drive** and the right account. |
 | "The local vault looks empty but was synced before" | Safety stop: you probably opened a different/empty vault. Open the right vault. If you really started over on this device: **Settings → Reset sync state**, then sync (it will do a safe first sync again). |
 | A file is "skipped" | See **Show sync log**: e.g. two files with the same name in one Drive folder (rename one in Drive), Google Docs (not synced), or a name with `: * ? " < > |` (rename it). |
@@ -409,6 +424,7 @@ git push --follow-tags
 - [SETUP.md](SETUP.md): Google Cloud details, full Drive vs privacy mode, sign-in expiry.
 - [INSTALL-IOS.md](INSTALL-IOS.md): extra background for iPhone/iPad.
 - [SECURITY.md](SECURITY.md): how secrets and data are protected; how to report a problem.
+- [PRIVACY.md](PRIVACY.md): privacy policy (what data the plugin uses and where it goes).
 - [CHANGELOG.md](CHANGELOG.md): what changed in each version.
 - [NOTICE](NOTICE) and [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md): license notices.
 

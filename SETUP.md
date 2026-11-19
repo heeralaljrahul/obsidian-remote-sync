@@ -61,10 +61,26 @@ Nothing secret is in the repo (your client ID and secret live only in plugin set
 4. **Contact information**: your email → Next → agree to the policy → **Create**.
 5. Optional but tidy: **Data access → Add or remove scopes** → add `https://www.googleapis.com/auth/drive` (or `.../auth/drive.file` if you'll use privacy mode) → Update → Save. The plugin requests the scope itself, so this is not strictly required.
 
+### Fill in Branding (required before publishing)
+
+Google won't let you publish until the app has a home page and a privacy policy. Left menu → **Branding**:
+
+| Field | Value |
+|---|---|
+| App name | `Obsidian Drive Sync` |
+| User support email | your email |
+| Application home page | `https://heeralaljrahul.github.io/obsidian-remote-sync/` |
+| Application privacy policy link | `https://heeralaljrahul.github.io/obsidian-remote-sync/PRIVACY.html` |
+| Application terms of service link | leave empty |
+| Authorized domains | `heeralaljrahul.github.io` |
+| Developer contact information | your email |
+
+Leave the logo empty: uploading a logo makes Google require a full brand review. Click **Save**. Domain-ownership verification is only needed if you submit the app for Google's review, which a personal app doesn't need. (If you used Option B for the callback page, use that repository's Pages address instead.)
+
 ### Publish the app to "In production" (important)
 
 1. Go to **Audience** (older consoles: the OAuth consent screen overview).
-2. Under **Publishing status: Testing**, click **Publish app** → **Confirm**. The status becomes **In production**.
+2. Under **Publishing status: Testing**, click **Publish app** → **Confirm**. The status becomes **In production**. If **Publish app** is greyed out, hover over it: Google lists what's still missing on the Branding page.
 
 Why: while an External app is in **Testing**, Google expires its sign-ins (refresh tokens) **7 days** after you approve, so you'd have to sign in again every week on every device. **In production** tokens keep working as long as they're used at least once every 6 months and you don't revoke them.
 
@@ -144,6 +160,7 @@ What the plugin actually does with full access: it lists and changes files **onl
 
 | Symptom | Fix |
 |---|---|
+| **Publish app** is greyed out ("homepage URL and privacy policy URL are required") | Fill in the **Branding** page as shown above, then save. |
 | `redirect_uri_mismatch` on Google's page | The redirect URI in the plugin and in the OAuth client must match character for character, including the trailing `/`. |
 | Callback page shows 404 | GitHub Pages isn't deployed yet (step 0), or the repo is private on a free plan. |
 | "Google rejected the saved sign-in (expired or revoked)" every week | The app is still in **Testing**. Publish it (step 3) and sign in again once. |
