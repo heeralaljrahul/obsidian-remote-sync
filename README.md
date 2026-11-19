@@ -23,7 +23,7 @@ It's a personal plugin: it isn't in Obsidian's community plugin store, and you i
 
 > ⚠️ **Back up first.** Copy your notes somewhere safe before the first sync (Part 1 of the guide).
 >
-> ⚠️ **Only one sync system per vault.** Don't let iCloud, Google Drive for Desktop, OneDrive, Dropbox or Obsidian Sync also sync the same vault folder. Two sync systems fight over the same files and can lose data. On iPhone/iPad the vault must be stored **On My iPhone/iPad**, not in iCloud.
+> ⚠️ **Only one sync system per vault folder, on each device.** On a device that uses this plugin, don't let iCloud, Google Drive for Desktop, OneDrive, Dropbox or Obsidian Sync also sync that same vault folder: two sync systems fight over the same files and can lose data. On iPhone/iPad the vault must be stored **On My iPhone/iPad**, not in iCloud. (Other computers may keep syncing the Drive folder with Google Drive for Desktop *instead of* the plugin; see [Part 9b](#part-9b-your-other-computers-desktop-laptop).)
 >
 > ⚠️ **No background sync on iPhone/iPad.** Apple doesn't allow it. Syncing happens while Obsidian is open: when you open it, return to it, leave it, after you stop typing, and when you tap the sync button.
 
@@ -287,7 +287,7 @@ Open **Settings** → scroll the left list down to **Google Drive Vault Sync**.
    - **Decide later:** nothing happens; you'll be asked again next time.
 6. 🌐 Check <https://drive.google.com>: your folder now holds everything. Path B: all your notes are there.
 
-**From now on, don't edit notes directly in the Google Drive website or through Google Drive for Desktop.** Edit in Obsidian; the plugin takes care of Drive.
+**On this computer, from now on, edit notes only in Obsidian** (the vault in `Documents`), not through `G:\` or the Drive website. The plugin takes care of Drive. Other computers can keep using Google Drive for Desktop instead of the plugin; see [Part 9b](#part-9b-your-other-computers-desktop-laptop).
 
 ---
 
@@ -372,6 +372,26 @@ Do **exactly the same as Part 8** on the iPad:
 4. Add this plugin with BRAT.
 5. Connect it: the same client ID and secret, sign in, and **the same Drive folder**.
 6. Do the first sync (mostly downloads), and keep Obsidian open until **Sync finished**.
+
+### Part 9b: Your other computers (desktop, laptop)
+
+Do you have more computers (e.g. a desktop and a laptop) that used to sync this vault with **Google Drive for Desktop**? Each computer can do **one** of these. Both work together with your iPhone and iPad, because everything meets in the same Google Drive folder.
+
+**Option 1: keep Google Drive for Desktop on that computer (no plugin).** Nothing changes on that computer: it syncs exactly as before.
+- Keep opening the vault from the Google Drive folder (e.g. `G:\My Drive\…`) as you always did.
+- **Don't install this plugin on that computer.**
+- Your iPhone and iPad (with the plugin) see that computer's changes once Google Drive for Desktop has uploaded them, and the other way round.
+
+**Option 2: use this plugin on that computer too.** Do Parts 4–7 on it: move the vault out of the Google Drive folder (Part 4, case A2), install the plugin, connect it, and run the first sync.
+
+**The one rule: never both on the same computer.** If a computer has the plugin, the vault it opens must **not** be inside the Google Drive for Desktop folder. If its vault *is* inside the Google Drive folder, don't install the plugin there. (Check where a vault lives: right-click any note → **Show in system explorer**, then look at the address bar.)
+
+**Good to know when computers use Google Drive for Desktop:**
+- **Before switching devices,** check that Google Drive for Desktop has finished uploading. Its icon in the taskbar tray says it's up to date.
+- **Conflicts on those computers** are handled by Google Drive for Desktop in its own way, which may keep two copies. Conflicts on the iPhone/iPad are handled by this plugin's conflict window.
+- **Duplicate names:** if two files ever end up with the same name in one Drive folder, the plugin leaves them alone and lists them in **Show sync log**. Delete or rename the extra one in Drive.
+- **Leave "Sync the .obsidian folder" off on the iPhone/iPad.** The computers' Obsidian settings and plugins (also uploaded by Google Drive for Desktop) then don't get mixed with the phone's.
+- **Deleting a note on the iPhone** moves it to Google Drive's **Trash**, and Google Drive for Desktop then removes it from that computer too. Restore it from Drive's Trash if needed.
 
 ---
 
