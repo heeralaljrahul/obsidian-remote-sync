@@ -61,7 +61,7 @@ The safest order is **PC → iPhone → iPad**: the PC has the most complete cop
 5. If it looks right, tap **Run first sync**. Otherwise **Cancel**: nothing happens.
 
 ### On the iPhone, then the iPad
-1. Create an **empty** vault **On My iPhone** (not iCloud), with any name.
+1. Create an **empty** vault **On My iPhone** (not iCloud), with any name. If Obsidian asks about sync, choose **Continue without sync**, not "Set up sync" (that is Obsidian Sync, a second sync system).
 2. Install BRAT and the plugin as above, then enable it.
 3. Settings:
    - client ID, secret and redirect URI: same as on the PC.

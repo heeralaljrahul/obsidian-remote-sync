@@ -293,35 +293,69 @@ Open **Settings** → scroll the left list down to **Google Drive Vault Sync**.
 
 ### Part 8: iPhone (📱, ~10 minutes + download time)
 
-1. **Install Obsidian** from the App Store and open it.
-2. **Create a vault that is NOT in iCloud:**
-   - Tap **Create new vault**. Name: anything (e.g. `Notes`).
-   - Make sure **Store in iCloud** is **off**. Tap **Create**.
-   - *Already have a vault in iCloud?* Make this new local one anyway, and use only this one with the plugin.
-3. **Open Settings:** swipe right from the left edge (or tap the sidebar icon at the top left) → tap the **⚙ gear**.
-4. **Community plugins** → tap **Turn on community plugins** → **Browse** → search **BRAT** → **Install** → **Enable**.
-5. Close settings. **Open the command palette:** pull down from the middle of the screen (Obsidian's default pull-down action), or open the left sidebar and tap the command palette button. Type `BRAT add` → **BRAT: Add a beta plugin for testing**.
-6. Paste `https://github.com/heeralaljrahul/obsidian-remote-sync` (tip: open this README on the phone and copy it) → latest version → **Add plugin**.
-7. **Settings → Community plugins** → make sure **Google Drive Vault Sync** is **on**.
-8. **Settings → Google Drive Vault Sync:**
-   1. **OAuth client ID** and **OAuth client secret:** the same ones as on the PC. Easiest is to copy them from your password manager. *(If you sent them to yourself by email or chat to copy them, delete that message afterwards.)*
-   2. **Permission scope:** same as the PC (Full Drive for Path A).
-   3. **Sign in with Google:** Safari opens → choose account → **Advanced → Go to Obsidian Drive Sync (unsafe)** → tick the **Google Drive** box → **Continue** → Safari asks **Open in "Obsidian"?** → **Open**. You see *Signed in as …*.
-      - *If that doesn't work:* on the PC, in the plugin settings press **Copy refresh token**. Put it in your password manager (never email/chat: it's the key to your Drive), copy it on the phone into **Paste refresh token** → **Save**.
-   4. **Drive vault folder:** type the folder's name → **Find by name** → pick it. Or paste the folder link → **Use ID**. It **must be the same folder as on the PC**.
-   5. **When to sync:** keep **opens / returning / leaving** on, and set **Sync after you stop editing** to `60`.
-   6. Leave **Sync the .obsidian folder** off.
-   7. Read the grey box at the top: *iOS doesn't allow background sync*. That's normal.
-9. **First sync on the iPhone:**
-   1. Optional, for big vaults: in the iPhone **Settings → Display & Brightness → Auto-Lock → Never** while it downloads (switch it back afterwards).
-   2. Open the left sidebar and tap the **circular-arrows icon**, or command palette → **Sync now**.
-   3. **Review your first sync** should show almost only **Downloads from Drive** (plus "Already in sync" if anything was there). Tap **Run first sync**.
-   4. **Keep Obsidian open** until **Sync finished**. If the phone locks or you switch apps, nothing breaks: open Obsidian again and it continues where it stopped.
-10. Open a few notes to check they're all there.
+#### 8.1 Install Obsidian
+1. Open the **App Store**, search **Obsidian** (by Dynalist Inc.), tap **Get** and install it.
+2. Open **Obsidian**.
+
+#### 8.2 Create a new, empty vault (not in iCloud, no Obsidian Sync)
+1. On the welcome screen tap **Create new vault** (or **Create a vault**).
+2. **Vault name:** anything you like, e.g. `Notes`. It doesn't have to match the PC.
+3. **Store in iCloud:** make sure it is **off** (grey). The vault must live **On My iPhone**: two sync systems on one vault can lose data.
+4. **Sync question:** Obsidian may ask whether to **set up sync**, offering choices like **Set up sync** and **Continue without sync**.
+   - Choose **Continue without sync** (the option that does **not** set up sync).
+   - **Don't choose "Set up sync":** that's **Obsidian Sync**, Obsidian's own paid service. This plugin does the syncing instead; using both would be two sync systems on one vault.
+5. Tap **Create**. Obsidian opens the new, empty vault.
+   - *Already have a vault in iCloud?* Leave it alone and use this new local one with the plugin.
+
+#### 8.3 Allow community plugins and install BRAT
+1. **Open Settings:** swipe right from the left edge of the screen (or tap the sidebar icon at the top left), then tap the **⚙ gear**.
+2. Tap **Community plugins**.
+3. Tap **Turn on community plugins**. If Obsidian shows a warning about plugins, confirm it (**Turn on**).
+4. Tap **Browse**, search **BRAT**, tap **BRAT** (by TfTHacker) → **Install** → **Enable**.
+5. Close Settings (the **✕** or swipe down).
+
+#### 8.4 Add this plugin with BRAT
+1. **Open the command palette:** pull down from the middle of the screen (Obsidian's default pull-down action), or open the left sidebar and tap the command palette button.
+2. Type `BRAT add` and tap **BRAT: Add a beta plugin for testing** (the wording can differ slightly by BRAT version).
+3. In the **Repository** box paste: `https://github.com/heeralaljrahul/obsidian-remote-sync`
+   (tip: open this guide in Safari on the phone and copy it from here).
+4. Choose the **latest version** (`0.1.0`), tick **Enable after installing** if it's offered, then tap **Add plugin**. Wait for "installed".
+5. **Settings → Community plugins:** check that **Google Drive Vault Sync** is in the list with its switch **on**.
+
+#### 8.5 Connect the plugin
+Open **Settings** → scroll down the left list (on iPhone: the list of plugin settings under *Community plugins*) → **Google Drive Vault Sync**.
+1. **OAuth client ID** and **OAuth client secret:** the same ones as on the PC. Easiest is to copy them from your password manager. *(If you sent them to yourself by email or chat to copy them, delete that message afterwards.)*
+2. **Redirect URI:** leave it as it is.
+3. **Permission scope:** the same as the PC (**Full Drive** for Path A).
+4. **Sign in with Google:** Safari opens →
+   1. choose your account →
+   2. **Advanced → Go to Obsidian Drive Sync (unsafe)** →
+   3. **tick the Google Drive** box →
+   4. **Continue** →
+   5. Safari asks **Open in "Obsidian"?** → **Open**.
+   6. Back in Obsidian you see *Signed in as …* and **"No expiry"**.
+   - *If that doesn't work:* on the PC, in the plugin settings press **Copy refresh token**. Put it in your password manager (never email or chat: it's the key to your Drive), then on the phone paste it into **Paste refresh token** → **Save**.
+5. **Drive vault folder:** type the folder's name → **Find by name** → pick it. Or paste the folder link → **Use ID**. It **must be the same folder as on the PC**; **Current folder** then shows its name.
+6. **When to sync:** keep **Sync when Obsidian opens**, **…returning…** and **…leaving…** on, and set **Sync after you stop editing (seconds)** to `60`.
+7. Leave **Sync the .obsidian folder** off.
+8. The grey box at the top says *iOS doesn't allow background sync*. That's normal.
+
+#### 8.6 First sync on the iPhone
+1. Optional, for big vaults: iPhone **Settings → Display & Brightness → Auto-Lock → Never** while it downloads (switch it back afterwards).
+2. Open the left sidebar and tap the **circular-arrows icon** ("Sync with Google Drive"), or command palette → **Google Drive Vault Sync: Sync now**.
+3. **Review your first sync** opens. It should show almost only **Downloads from Drive** (plus "Already in sync" if anything was there), and **no deletions**. Tap **Run first sync**.
+4. **Keep Obsidian open** until **Sync finished**. If the phone locks or you switch apps, nothing breaks: open Obsidian again and it continues where it stopped.
+5. Open a few notes and folders to check everything is there.
 
 ### Part 9: iPad (📲)
 
-Do **exactly the same as Part 8** on the iPad: new vault **not in iCloud**, BRAT, the plugin, the same client ID/secret, sign in, **the same Drive folder**, first sync (downloads), and keep Obsidian open until it finishes.
+Do **exactly the same as Part 8** on the iPad:
+1. Install Obsidian.
+2. Create a new vault: **Store in iCloud off**, and at the sync question choose **Continue without sync** (not "Set up sync").
+3. Turn on community plugins and install BRAT.
+4. Add this plugin with BRAT.
+5. Connect it: the same client ID and secret, sign in, and **the same Drive folder**.
+6. Do the first sync (mostly downloads), and keep Obsidian open until **Sync finished**.
 
 ---
 
